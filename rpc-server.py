@@ -34,7 +34,7 @@ class MainHandler(tornado.web.RequestHandler):
 
 
 class RPCHandler(RPCServer):
-    def get_packages_list(self, page_number, quantity):
+    def get_packages_list__remote(self, page_number, quantity):
         return '{}, {}'.format(page_number, quantity)
 
 
