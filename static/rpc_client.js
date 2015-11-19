@@ -1,5 +1,28 @@
-(function() {
-    var RPCClient = function(ws_address) {
+var FirmwareBuild = FirmwareBuild || {};
+
+(function(exports) {
+    'use strict';
+
+    exports.Events = function() {
+        this.bind = function(ev, cb) {
+            var callbacks = (this.callbacks || (this.callbacks = {}));
+            (callbacks[ev] || (callbacks[ev] = [])).push(cb);
+        };
+
+        this.trigger = function(ev) {
+            var args = [].slice.call(arguments)
+              , callbacks = (this.callbacks || (this.callbacks = {}))
+              , i = 0;
+
+            if (typeof callbacks[ev] === 'undefined')
+                return this;
+
+            for (; i < callbacks[ev].length; i++)
+                callbacks[ev][i].apply(this, args.slice(1));
+        };
+    };
+
+    exports.RPCClient = function(ws_address) {
         var _callbacks_list = {}
           , _log
           , _opened = false
@@ -10,7 +33,7 @@
         _rpc.onopen = (event) => {
             _log('opened!');
             _opened = true;
-            this.onready();
+            this.trigger('onready');
         };
 
         _rpc.onclose = function(event) {
@@ -59,19 +82,7 @@
             } else
                 _log('connection with the RPC server is not established!');
         };
-
-        this.onready = function() {};
     };
 
-    /* Пример использования */
-
-    var client = new RPCClient('ws://localhost:8888/rpc');
-    client.onready = function() {
-        client.exec('get_packages_list', [1, 100], function(data) {
-            console.log(data);
-        });
-        client.exec('get_packages_list', [2, 100], function(data) {
-            console.log(data);
-        });
-    };
-}());
+    exports.RPCClient.prototype = new exports.Events();
+}(FirmwareBuild));
