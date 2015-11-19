@@ -29,8 +29,7 @@ class RPCServer(tornado.websocket.WebSocketHandler):
         ret = {}
         parsed = json_decode(message)
         function_name = parsed['function_name'] + '__remote'
-        if (function_name in dir(self)) and \
-           (function_name in self.remote_functions):
+        if function_name in self.remote_functions:
             method = getattr(self, function_name)
         else:
             ret['error'] = 'the {} function is ' \
