@@ -37,9 +37,11 @@ class RPCServer(tornado.websocket.WebSocketHandler):
             self.write_message(json_encode(ret))
             return
 
-        try:
+        # Необходимо проверить, совпадает ли количество переданных аргументов
+        # с количеством принимаемых аргументов, не считая self.
+        if len(parsed['parameters_list']) == method.__code__.co_argcount - 1:
             result = method(*parsed['parameters_list'])
-        except TypeError:
+        else:
             ret['error'] = 'number of arguments mismatch in the {} ' \
                            'function call'.format(parsed['function_name'])
             self.write_message(json_encode(ret))
