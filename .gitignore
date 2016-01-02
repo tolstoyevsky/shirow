@@ -1,2 +1,6 @@
 .idea
 __pycache__
+node_modules
+static/bundles
+
+npm-debug.log

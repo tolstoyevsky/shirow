@@ -1,12 +1,13 @@
-(function() {
-    var client = new FirmwareBuild.RPCClient('ws://localhost:8888/rpc');
+import RPCClient from './rpc_client.js';
 
-    client.bind('onready', function() {
-        client.exec('get_packages_list', [1, 100], function(data) {
-            console.log(data);
-        });
-        client.exec('get_packages_list', [2, 100], function(data) {
-            console.log(data);
-        });
+var client = new RPCClient('ws://localhost:8888/rpc');
+
+client.on('ready', function() {
+    client.emit('get_packages_list', 1, 100).then(data => {
+        console.log(data);
     });
-}());
+
+    client.emit('get_packages_list', 2, 100).then(data => {
+        console.log(data);
+    });
+});

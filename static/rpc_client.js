@@ -1,88 +1,151 @@
-var FirmwareBuild = FirmwareBuild || {};
+import Events from 'cusdeb-utils';
 
-(function(exports) {
-    'use strict';
+class RPCClient extends Events {
+    static get RETRIES_NUMBER() {
+        return 5;
+    }
 
-    exports.Events = function() {
-        this.bind = function(ev, cb) {
-            var callbacks = (this.callbacks || (this.callbacks = {}));
-            (callbacks[ev] || (callbacks[ev] = [])).push(cb);
+    get RETRIES_NUMBER() {
+        return this.constructor.RETRIES_NUMBER;
+    }
+
+    constructor(ws_host) {
+        super();
+
+        this._attempts = 0;
+        this._callbacks = {};
+        this._queue = [];
+        this._request_number = 0;
+        this._timeouts = {};
+        this._ws_host = ws_host;
+
+        this._connect();
+
+        this.on('ready', () => {
+            this._log('connection is established');
+            this._queue.forEach((e) => {
+                this._send(e);
+            });
+
+            this._queue.length = 0;
+        });
+    }
+
+    /* Internal methods. */
+
+    _log(msg, tracelog) {
+        console[tracelog ? 'trace' : 'log'](`RPCClient: ${msg}`);
+    }
+
+    _register_callback(callback, n) {
+        this._callbacks[n] = this._callbacks[n] || [];
+        this._callbacks[n].push(callback);
+    }
+
+    _register_timeout(timeoutId, n) {
+        this._timeouts[n] = timeoutId;
+    }
+
+    /**
+    * will be executed either on message event or after timeout
+    */
+    _unregister(n) {
+        delete this._callbacks[n];
+        clearTimeout(this._timeouts[n]);
+    }
+
+    _connect() {
+        this._rpc = new WebSocket(this._ws_host);
+
+        this._rpc.onopen = () => {
+            this._attempts = 0;
+            this._is_opened = true;
+            this.trigger('ready');
         };
 
-        this.trigger = function(ev) {
-            var args = [].slice.call(arguments)
-              , callbacks = (this.callbacks || (this.callbacks = {}))
-              , i = 0;
+        this._rpc.onclose = () => {
+            this._is_opened = false;
 
-            if (typeof callbacks[ev] === 'undefined')
-                return this;
+            if (this._attempts < this.RETRIES_NUMBER) {
+                var delay = this._attempts * this._attempts;
 
-            for (; i < callbacks[ev].length; i++)
-                callbacks[ev][i].apply(this, args.slice(1));
-        };
-    };
+                this._log(
+                    `connection failed, retrying in ${delay} seconds.`,
+                    true
+                );
 
-    exports.RPCClient = function(ws_address) {
-        var _callbacks_list = {}
-          , _log
-          , _opened = false
-          , _register_callback
-          , _request_number = 0
-          , _rpc = new WebSocket(ws_address);
+                setTimeout(() => {
+                    this._connect();
+                }, delay * 1000);
 
-        _rpc.onopen = (event) => {
-            _log('opened!');
-            _opened = true;
-            this.trigger('onready');
+                this._attempts += 1;
+
+            } else {
+                this._log(
+                    `connection failed after ${this.RETRIES_NUMBER} retries.`,
+                    true
+                );
+            }
         };
 
-        _rpc.onclose = function(event) {
-            _log('closed!');
-            _opened = false;
-        };
+        this._rpc.onmessage = (event) => {
+            var json = JSON.parse(event.data);
 
-        _rpc.onmessage = function(event) {
-            var json = JSON.parse(event.data)
+            if (json.result) {
+                let n = json.n;
+                let result = json.result;
+                let cbs = this._callbacks[n];
 
-              , cb
-              , n
-              , result;
+                if (cbs) {
+                    cbs.forEach((cb) => {
+                        result = cb(result);
+                    });
+                }
 
-            if ('result' in json) {
-                n = json['n'];
-                result = json['result'];
-
-                cb = _callbacks_list[n];
-                cb(result);
-                delete cb[n];
-            } else
-                throw json['error']
+                this._unregister(n);
+            } else {
+                throw json.error
+            }
         }
+    }
 
-        _log = function(message) {
-            console.log(`RPCClient: ${message}`)
+    _send(data_str) {
+        if (this._is_opened) {
+            this._rpc.send(data_str);
+        } else {
+            this._queue.push(data_str);
+        }
+    }
+
+    /* User visible methods. */
+
+    emit(procedure_name, ...parameters_list) {
+        var that = this;
+        var data = {
+            'function_name': procedure_name,
+            'parameters_list': parameters_list,
+            'n': this._request_number
         };
+        var request_number = this._request_number;
 
-        _register_callback = function(callback, n) {
-            _callbacks_list[n] = callback;
+        this._send(JSON.stringify(data));
+        this._request_number += 1;
+
+        return {
+            then: function (callback) {
+                that._register_callback(callback, request_number);
+                return this;
+            },
+            timeout: function (time, callback) {
+                let timeoutId = setTimeout(() => {
+                    that._unregister(request_number);
+                    return callback();
+                }, time);
+                that._register_timeout(timeoutId, request_number);
+                return this;
+            }
         };
+    }
+}
 
-        this.exec = function(procedure_name, parameters_list, callback) {
-            var data;
-            if (_opened) {
-                data = {
-                    'function_name': procedure_name,
-                    'parameters_list': parameters_list,
-                    'n': _request_number
-                };
-                _rpc.send(JSON.stringify(data));
-
-                _register_callback(callback, _request_number);
-                _request_number++;
-            } else
-                _log('connection with the RPC server is not established!');
-        };
-    };
-
-    exports.RPCClient.prototype = new exports.Events();
-}(FirmwareBuild));
+export default RPCClient;
