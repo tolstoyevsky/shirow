@@ -1,4 +1,4 @@
-import RPCClient from './rpc_client.js';
+import RPCClient from '../client/client.js';
 
 var client = new RPCClient('ws://localhost:8888/rpc');
 

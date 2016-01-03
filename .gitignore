@@ -1,6 +1,7 @@
 .idea
-__pycache__
+demo/bundles
 node_modules
-static/bundles
+server/__pycache__
 
 npm-debug.log
+*.swp
