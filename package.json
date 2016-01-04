@@ -1,8 +1,15 @@
 {
-  "name": "cusdeb-rpc-server",
-  "version": "1.0.0",
-  "description": "",
+  "name": "wsrpc",
+  "version": "0.1.0",
+  "description": "wsrpc is an implementation of a distinctive concept of a remote procedure call.",
   "main": "client/client.js",
+  "homepage": "https://bitbucket.org/eugulixes/wsrpc",
+  "author": "CusDeb Team",
+  "maintainer": {
+    "name": "Maxim Karpinskiy",
+    "email": "karpinski20@gmail.com"
+  },
+  "license": "Apache-2.0",
   "dependencies": {
     "cusdeb-utils": "^1.0.0"
   },
@@ -17,9 +24,6 @@
     "type": "git",
     "url": "git+ssh://git@bitbucket.org/eugulixes/rpc-server.git"
   },
-  "author": "CUSDEB Team",
-  "license": "MIT",
-  "homepage": "https://bitbucket.org/eugulixes/rpc-server#readme",
   "devDependencies": {
     "babel-core": "^6.3.26",
     "babel-loader": "^6.2.0",
