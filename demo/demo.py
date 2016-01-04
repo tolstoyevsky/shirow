@@ -7,7 +7,7 @@ import tornado.websocket
 import os.path
 from tornado.options import define, options
 
-from server import RPCServer
+from wsrpc.server import RPCServer
 
 # TODO: перевести на модуль configparser
 define("port", default=8888, help="run on the given port", type=int)

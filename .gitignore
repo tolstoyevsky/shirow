@@ -1,7 +1,9 @@
 .idea
+build
 demo/bundles
 node_modules
-server/__pycache__
+wsrpc/__pycache__
+wsrpc.egg-info
 
 npm-debug.log
 *.swp
