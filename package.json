@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@bitbucket.org/eugulixes/rpc-server.git"
+    "url": "git+ssh://git@bitbucket.org/eugulixes/wsrpc.git"
   },
   "devDependencies": {
     "babel-core": "^6.3.26",
