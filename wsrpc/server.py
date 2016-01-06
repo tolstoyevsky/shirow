@@ -31,7 +31,8 @@ class RPCServer(tornado.websocket.WebSocketHandler):
     def destroy(self):
         pass
 
-    # Реализаия методов, унаследованных от tornado.websocket.WebSocketHandler
+    # Implementing the methods inherited from
+    # tornado.websocket.WebSocketHandler
 
     def open(self):
         self.create()
@@ -51,8 +52,9 @@ class RPCServer(tornado.websocket.WebSocketHandler):
             self.write_message(json_encode(ret))
             return
 
-        # Необходимо проверить, совпадает ли количество переданных аргументов
-        # с количеством принимаемых аргументов, не считая self.
+        # Checking if the number of actual arguments passed to a remote
+        # procedure matches the number of formal parameters of the remote
+        # procedure (except the self argument).
         if len(parsed['parameters_list']) == method.__code__.co_argcount - 1:
             result = method(*parsed['parameters_list'])
         else:
@@ -61,5 +63,5 @@ class RPCServer(tornado.websocket.WebSocketHandler):
             self.write_message(json_encode(ret))
             return
 
-        ret = {'result': result, 'n': parsed['n']}
+        ret = {'result': result, 'marker': parsed['marker']}
         self.write_message(json_encode(ret))

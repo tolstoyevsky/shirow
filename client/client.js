@@ -30,9 +30,9 @@ class RPCClient extends Events {
         super();
 
         this._attempts = 0;
+        this._call_number = 0;
         this._callbacks = {};
         this._queue = [];
-        this._request_number = 0;
         this._timeouts = {};
         this._ws_host = ws_host;
 
@@ -54,21 +54,21 @@ class RPCClient extends Events {
         console[tracelog ? 'trace' : 'log'](`RPCClient: ${msg}`);
     }
 
-    _register_callback(callback, n) {
-        this._callbacks[n] = this._callbacks[n] || [];
-        this._callbacks[n].push(callback);
+    _register_callback(callback, marker) {
+        this._callbacks[marker] = this._callbacks[marker] || [];
+        this._callbacks[marker].push(callback);
     }
 
-    _register_timeout(timeoutId, n) {
-        this._timeouts[n] = timeoutId;
+    _register_timeout(timeoutId, marker) {
+        this._timeouts[marker] = timeoutId;
     }
 
     /**
     * will be executed either on message event or after timeout
     */
-    _unregister(n) {
-        delete this._callbacks[n];
-        clearTimeout(this._timeouts[n]);
+    _unregister(marker) {
+        delete this._callbacks[marker];
+        clearTimeout(this._timeouts[marker]);
     }
 
     _connect() {
@@ -109,17 +109,18 @@ class RPCClient extends Events {
             var json = JSON.parse(event.data);
 
             if (json.result) {
-                let n = json.n;
+                let marker = json.marker;
                 let result = json.result;
-                let cbs = this._callbacks[n];
+                let cbs = this._callbacks[marker];
 
                 if (cbs) {
+                    /* There can be more than one handler function. */
                     cbs.forEach((cb) => {
                         result = cb(result);
                     });
                 }
 
-                this._unregister(n);
+                this._unregister(marker);
             } else {
                 throw json.error
             }
@@ -138,15 +139,25 @@ class RPCClient extends Events {
 
     emit(procedure_name, ...parameters_list) {
         var that = this;
+        /*
+         * The RPC client and server use so called markers to map a remote
+         * procedure call with its return value. To call a remote procedure,
+         * the RPC client sends to the RPC server the name of the procedure, a
+         * list of its input parameters and the marker associated with it. When
+         * the procedure is ready to return a result, the server sends to the
+         * client the return value and the marker. Then, using the marker, the
+         * client is able to call the corresponding handler function. The call
+         * number is used as a marker.
+         */
         var data = {
             'function_name': procedure_name,
             'parameters_list': parameters_list,
-            'n': this._request_number
+            'marker': this._call_number
         };
-        var request_number = this._request_number;
+        var request_number = this._call_number;
 
         this._send(JSON.stringify(data));
-        this._request_number += 1;
+        this._call_number += 1;
 
         return {
             then: function (callback) {
