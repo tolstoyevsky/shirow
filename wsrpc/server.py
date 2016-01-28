@@ -12,18 +12,96 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import configparser
+import logging
+import sys
+
+import jwt
+import redis
 import tornado
 from tornado.escape import json_decode, json_encode
+from tornado.websocket import WebSocketHandler
 
 
-class RPCServer(tornado.websocket.WebSocketHandler):
+class RPCServer(WebSocketHandler):
     def __init__(self, application, request, **kwargs):
-        tornado.websocket.WebSocketHandler.__init__(self, application, request,
-                                                    **kwargs)
+        WebSocketHandler.__init__(self, application, request, **kwargs)
+
+        self.config = configparser.ConfigParser()
+        self.logger = logging.getLogger('tornado.application')
         self.remote_functions = []
+        self.user_id = None
+
         for method in dir(self):
             if method.endswith('__remote'):
                 self.remote_functions.append(method)
+
+        self.config.read('wsrpc.ini')
+
+    #
+    # Internal methods.
+    #
+    def _decode_token(self, encoded_token):
+        if 'token' in self.config:
+            algorithm = self.config.get('token', 'algorithm', fallback='HS256')
+            try:
+                # The key parameter is mandatory.
+                key = self.config['token']['key']
+            except KeyError:
+                self._exit('The key parameter must be specified in the '
+                           'configuration file')
+
+            return jwt.decode(encoded_token, key, algorithm=algorithm)
+        else:
+            self._exit("The token section doesn't exist in the configuration "
+                       "file")
+
+    def _dismiss_request(self):
+        self.logger.warning('Authentication request was dismissed')
+        self.set_status(401)  # Unauthorized
+        self.set_header('WWW-Authenticate', 'Token realm="wsrpc"')
+
+    def _exit(self, message):
+        self.logger.error(message)
+        sys.exit(1)
+
+    def _open_redis_connection(self):
+        if 'redis' in self.config:
+            host = self.config.get('redis', 'host', fallback='localhost')
+            port = self.config.get('redis', 'port', fallback='6379')
+            redis_conn = redis.StrictRedis(host=host, port=port, db=0)
+            try:
+                connected = True if redis_conn.ping() else False
+            except redis.exceptions.ConnectionError:
+                connected = False
+
+            if not connected:
+                self._exit('wsrpc is not able to connect to Redis')
+
+            return redis_conn
+        else:
+            self._exit("The redis section doesn't exist in the configuration "
+                       "file")
+
+    @tornado.web.asynchronous
+    def get(self, *args, **kwargs):
+        try:
+            encoded_token = args[0]
+        except IndexError:  # The request doesn't contain a token.
+            self._dismiss_request()
+            return
+
+        redis_conn = self._open_redis_connection()
+        if redis_conn.exists(encoded_token):
+            token = self._decode_token(encoded_token)
+            self.user_id = token['user_id']
+            # The WebSocket connection request must not contain any parameters.
+            # The only parameter we needed has already been processed. Now we
+            # have to get rid of it.
+            args = ()
+            WebSocketHandler.get(self, *args, **kwargs)
+        else:
+            self._dismiss_request()
 
     def create(self):
         pass

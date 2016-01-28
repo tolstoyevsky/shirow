@@ -31,7 +31,7 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
             (r'/', MainHandler),
-            (r'/rpc', RPCHandler),
+            (r'/rpc/token/([\w\.]+)', RPCHandler),
         ]
         settings = dict(
             cookie_secret='__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__',
