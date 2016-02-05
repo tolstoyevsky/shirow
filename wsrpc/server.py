@@ -29,9 +29,20 @@ def remote(func):
     @wraps(func)
     @gen.coroutine
     def wrapper(*args, **kwargs):
-        return func(*args, **kwargs)
+        args += tuple(kwargs.values())
+        return func(*args)
 
-    wrapper.arguments_number = func.__code__.co_argcount
+    try:
+        defaults_number = len(func.__defaults__)
+    # If there are no default arguments func.__defaults__ is None.
+    except TypeError:
+        defaults_number = 0
+
+    arguments_number = func.__code__.co_argcount
+    wrapper.arguments_range = (
+        arguments_number - defaults_number,  # min
+        arguments_number  # max
+    )
     wrapper.remote = True
 
     return wrapper
@@ -150,7 +161,8 @@ class RPCServer(WebSocketHandler):
             # Checking if the number of actual arguments passed to a remote
             # procedure matches the number of formal parameters of the remote
             # procedure (except the self argument).
-            if len(parameters_list) == method.arguments_number - 1:
+            min, max = method.arguments_range
+            if (max - 1) >= len(parameters_list) >= (min - 1):
                 self._call_remote_procedure(method, *parameters_list,
                                             marker=marker)
             else:

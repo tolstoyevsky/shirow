@@ -47,6 +47,9 @@ class MockRPCServer(RPCServer):
     def div_by_zero(self):
         1 / 0
 
+    @remote
+    def say_hello(self, name='Shirow'):
+        return 'Hello {}!'.format(name)
 
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
     @gen.coroutine
@@ -149,5 +152,28 @@ class RPCServerTest(WebSocketBaseTestCase):
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'an error occurred while executing the function'
+        })
+        yield self.close(ws)
+
+    @gen_test
+    def test_default_parameters(self):
+        ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
+        data = {
+            'function_name': 'say_hello',
+            'parameters_list': [],
+            'marker': 1
+        }
+        ws.write_message(json_encode(data))
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'result': 'Hello Shirow!',
+            'marker': 1
+        })
+        data.update(parameters_list=['Norris'])
+        ws.write_message(json_encode(data))
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'result': 'Hello Norris!',
+            'marker': 1
         })
         yield self.close(ws)
