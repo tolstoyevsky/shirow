@@ -58,8 +58,9 @@ class RPCServer(WebSocketHandler):
 
     def _dismiss_request(self):
         self.logger.warning('Authentication request was dismissed')
-        self.set_status(401)  # Unauthorized
         self.set_header('WWW-Authenticate', 'Token realm="wsrpc"')
+        self.set_status(401)  # Unauthorized
+        self.finish()
 
     def _exit(self, message):
         self.logger.error(message)
