@@ -21,7 +21,7 @@ import tornado.websocket
 import os.path
 from tornado.options import define, options
 
-from wsrpc.server import RPCServer
+from wsrpc.server import RPCServer, remote
 
 # TODO: перевести на модуль configparser
 define("port", default=8888, help="run on the given port", type=int)
@@ -48,7 +48,8 @@ class MainHandler(tornado.web.RequestHandler):
 
 
 class RPCHandler(RPCServer):
-    def get_packages_list__remote(self, page_number, quantity):
+    @remote
+    def get_packages_list(self, page_number, quantity):
         return '{}, {}'.format(page_number, quantity)
 
 

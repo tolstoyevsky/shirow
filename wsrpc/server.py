@@ -15,12 +15,26 @@
 import configparser
 import logging
 import sys
+from functools import wraps
 
 import jwt
 import redis
 import tornado
+from tornado import gen
 from tornado.escape import json_decode, json_encode
 from tornado.websocket import WebSocketHandler
+
+
+def remote(func):
+    @wraps(func)
+    @gen.coroutine
+    def wrapper(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    wrapper.arguments_number = func.__code__.co_argcount
+    wrapper.remote = True
+
+    return wrapper
 
 
 class RPCServer(WebSocketHandler):
@@ -29,18 +43,23 @@ class RPCServer(WebSocketHandler):
 
         self.config = configparser.ConfigParser()
         self.logger = logging.getLogger('tornado.application')
-        self.remote_functions = []
         self.user_id = None
-
-        for method in dir(self):
-            if method.endswith('__remote'):
-                self.remote_functions.append(method)
 
         self.config.read('wsrpc.ini')
 
     #
     # Internal methods.
     #
+    @gen.coroutine
+    def _call_remote_procedure(self, func, *args, **kwargs):
+        marker = kwargs.pop('marker')
+        result = yield func(*args)
+        response = {
+            'result': result,
+            'marker': marker,
+        }
+        self.write_message(json_encode(response))
+
     def _decode_token(self, encoded_token):
         if 'token' in self.config:
             algorithm = self.config.get('token', 'algorithm', fallback='HS256')
@@ -122,25 +141,23 @@ class RPCServer(WebSocketHandler):
     def on_message(self, message):
         ret = {}
         parsed = json_decode(message)
-        function_name = parsed['function_name'] + '__remote'
-        if function_name in self.remote_functions:
-            method = getattr(self, function_name)
+        function_name = parsed['function_name']
+        marker = parsed['marker']
+        parameters_list = parsed['parameters_list']
+        method = getattr(self, function_name, None)
+        if function_name in dir(self) and hasattr(method, 'remote'):
+            # Checking if the number of actual arguments passed to a remote
+            # procedure matches the number of formal parameters of the remote
+            # procedure (except the self argument).
+            if len(parameters_list) == method.arguments_number - 1:
+                self._call_remote_procedure(method, *parameters_list,
+                                            marker=marker)
+            else:
+                ret['error'] = 'number of arguments mismatch in the {} ' \
+                               'function call'.format(function_name)
+                self.write_message(json_encode(ret))
         else:
             ret['error'] = 'the {} function is ' \
                            'undefined'.format(parsed['function_name'])
             self.write_message(json_encode(ret))
             return
-
-        # Checking if the number of actual arguments passed to a remote
-        # procedure matches the number of formal parameters of the remote
-        # procedure (except the self argument).
-        if len(parsed['parameters_list']) == method.__code__.co_argcount - 1:
-            result = method(*parsed['parameters_list'])
-        else:
-            ret['error'] = 'number of arguments mismatch in the {} ' \
-                           'function call'.format(parsed['function_name'])
-            self.write_message(json_encode(ret))
-            return
-
-        ret = {'result': result, 'marker': parsed['marker']}
-        self.write_message(json_encode(ret))
