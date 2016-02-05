@@ -52,12 +52,13 @@ class RPCServer(WebSocketHandler):
     #
     @gen.coroutine
     def _call_remote_procedure(self, func, *args, **kwargs):
-        marker = kwargs.pop('marker')
-        result = yield func(*args)
-        response = {
-            'result': result,
-            'marker': marker,
-        }
+        response = {'marker': kwargs.pop('marker')}
+        try:
+            response['result'] = yield func(*args)
+        except Exception:
+            message = 'an error occurred while executing the function'
+            self.logger.exception(message)
+            response = {'error': message}
         self.write_message(json_encode(response))
 
     def _decode_token(self, encoded_token):

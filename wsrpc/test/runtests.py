@@ -43,6 +43,10 @@ class MockRPCServer(RPCServer):
     def add(self, a, b):
         return a + b
 
+    @remote
+    def div_by_zero(self):
+        1 / 0
+
 
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
     @gen.coroutine
@@ -130,5 +134,20 @@ class RPCServerTest(WebSocketBaseTestCase):
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'number of arguments mismatch in the add function call'
+        })
+        yield self.close(ws)
+
+    @gen_test
+    def test_handling_errors_in_remote_procedures(self):
+        ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
+        data = {
+            'function_name': 'div_by_zero',
+            'parameters_list': [],
+            'marker': 1
+        }
+        ws.write_message(json_encode(data))
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'error': 'an error occurred while executing the function'
         })
         yield self.close(ws)
