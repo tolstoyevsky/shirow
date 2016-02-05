@@ -51,6 +51,7 @@ class MockRPCServer(RPCServer):
     def say_hello(self, name='Shirow'):
         return 'Hello {}!'.format(name)
 
+
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
     @gen.coroutine
     def ws_connect(self, path, compression_options=None):
@@ -82,6 +83,14 @@ class RPCServerTest(WebSocketBaseTestCase):
              dict(close_future=self.close_future)),
         ])
 
+    def prepare_payload(self, procedure_name, parameters_list, marker):
+        data = {
+            'function_name': procedure_name,
+            'parameters_list': parameters_list,
+            'marker': marker
+        }
+        return json_encode(data)
+
     def test_tokenless_request(self):
         response = self.fetch('/rpc')
         self.assertEqual(response.code, 401)
@@ -93,12 +102,8 @@ class RPCServerTest(WebSocketBaseTestCase):
     @gen_test
     def test_calling_existent_function(self):
         ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
-        data = {
-            'function_name': 'add',
-            'parameters_list': [1, 2],
-            'marker': 1
-        }
-        ws.write_message(json_encode(data))
+        payload = self.prepare_payload('add', [1, 2], 1)
+        ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {'result': 3, 'marker': 1})
         yield self.close(ws)
@@ -106,12 +111,8 @@ class RPCServerTest(WebSocketBaseTestCase):
     @gen_test
     def test_calling_non_existent_function(self):
         ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
-        data = {
-            'function_name': 'non_existent_function',
-            'parameters_list': [],
-            'marker': 1
-        }
-        ws.write_message(json_encode(data))
+        payload = self.prepare_payload('non_existent_function', [], 1)
+        ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'the non_existent_function function is undefined'
@@ -121,19 +122,16 @@ class RPCServerTest(WebSocketBaseTestCase):
     @gen_test
     def test_mismatching_parameters(self):
         ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
-        data = {
-            'function_name': 'add',
-            'parameters_list': [1],  # less than is required
-            'marker': 1
-        }
-        ws.write_message(json_encode(data))
+        # less than is required
+        payload = self.prepare_payload('add', [1], 1)
+        ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'number of arguments mismatch in the add function call'
         })
         # more than is required
-        data.update(parameters_list=[1, 3, 5], marker=2)
-        ws.write_message(json_encode(data))
+        payload = self.prepare_payload('add', [1, 3, 5], 2)
+        ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'number of arguments mismatch in the add function call'
@@ -143,12 +141,8 @@ class RPCServerTest(WebSocketBaseTestCase):
     @gen_test
     def test_handling_errors_in_remote_procedures(self):
         ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
-        data = {
-            'function_name': 'div_by_zero',
-            'parameters_list': [],
-            'marker': 1
-        }
-        ws.write_message(json_encode(data))
+        payload = self.prepare_payload('div_by_zero', [], 1)
+        ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'an error occurred while executing the function'
@@ -158,22 +152,18 @@ class RPCServerTest(WebSocketBaseTestCase):
     @gen_test
     def test_default_parameters(self):
         ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
-        data = {
-            'function_name': 'say_hello',
-            'parameters_list': [],
-            'marker': 1
-        }
-        ws.write_message(json_encode(data))
+        payload = self.prepare_payload('say_hello', [], 1)
+        ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello Shirow!',
             'marker': 1
         })
-        data.update(parameters_list=['Norris'])
-        ws.write_message(json_encode(data))
+        payload = self.prepare_payload('say_hello', ['Norris'], 2)
+        ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello Norris!',
-            'marker': 1
+            'marker': 2
         })
         yield self.close(ws)
