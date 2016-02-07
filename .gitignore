@@ -4,6 +4,8 @@ demo/bundles
 node_modules
 wsrpc/__pycache__
 wsrpc.egg-info
+static/bundles
 
 npm-debug.log
 *.swp
+*.pyc

@@ -29,6 +29,10 @@ class RPCClient extends Events {
     constructor(ws_host) {
         super();
 
+        if (typeof ws_host !== 'string' || !ws_host.startsWith('ws')) {
+            throw new Error('The ws_host parameter must be started with the ws:// or wss:// URI scheme.')
+        }
+
         this._attempts = 0;
         this._call_number = 0;
         this._callbacks = {};
@@ -83,25 +87,19 @@ class RPCClient extends Events {
         this._rpc.onclose = () => {
             this._is_opened = false;
 
-            if (this._attempts < this.RETRIES_NUMBER) {
-                var delay = this._attempts * this._attempts;
-
-                this._log(
-                    `connection failed, retrying in ${delay} seconds.`,
-                    true
+            /*
+             * The WebSocket API doesn't provide any way to get response
+             * headers. Thus, at the first attempt to reconnect to the RPC
+             * server we have to send a simple HTTP GET request in order to
+             * diagnose a problem.
+             */
+            if (this._attempts === 0) {
+                this._diagnose(
+                    this._reconnect.bind(this),
+                    () => this._log('Authorization attempt failed')
                 );
-
-                setTimeout(() => {
-                    this._connect();
-                }, delay * 1000);
-
-                this._attempts += 1;
-
             } else {
-                this._log(
-                    `connection failed after ${this.RETRIES_NUMBER} retries.`,
-                    true
-                );
+                this._reconnect();
             }
         };
 
@@ -127,12 +125,81 @@ class RPCClient extends Events {
         }
     }
 
+    _reconnect() {
+        if (this._attempts < this.RETRIES_NUMBER) {
+            var delay = this._attempts * this._attempts;
+
+            this._log(
+                `connection failed, retrying in ${delay} seconds.`,
+                true
+            );
+
+            setTimeout(() => {
+                this._connect();
+            }, delay * 1000);
+
+            this._attempts += 1;
+
+        } else {
+            this._log(
+                `connection failed after ${this.RETRIES_NUMBER} retries.`,
+                true
+            );
+        }
+    }
+
+    /*
+     * Allows closing connection manually. It can be useful for debugging
+     * purposes.
+     */
+    _disconnect() {
+        if (!this._rpc) {
+            return;
+        }
+
+        this._rpc.close();
+    }
+
     _send(data_str) {
         if (this._is_opened) {
             this._rpc.send(data_str);
         } else {
             this._queue.push(data_str);
         }
+    }
+
+    _diagnose(success, failure) {
+        if (this._is_diagnosed) {
+            /*
+             * It means that the diagnosing has been made before and the
+             * current token is valid, but after a while connection was broken.
+             */
+            return success();
+        }
+
+        /*
+         * Note that if the wss:// URI scheme is used, we will get https after
+         * replacement.
+         */
+        let http_host = this._ws_host.replace(/^ws/, 'http');
+        let xhr = new XMLHttpRequest();
+        xhr.open('GET', http_host);
+
+        success = success || function () {};
+        failure = failure || function () {};
+
+        xhr.onreadystatechange = () => {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 401) {
+                    failure();
+                } else {
+                    this._is_diagnosed = true;
+                    success();
+                }
+            }
+        };
+
+        xhr.send();
     }
 
     /* User visible methods. */
