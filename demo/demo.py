@@ -19,12 +19,9 @@ import tornado.options
 import tornado.web
 import tornado.websocket
 import os.path
-from tornado.options import define, options
+from tornado.options import options
 
 from wsrpc.server import RPCServer, remote
-
-# TODO: перевести на модуль configparser
-define("port", default=8888, help="run on the given port", type=int)
 
 
 class Application(tornado.web.Application):
@@ -54,6 +51,10 @@ class RPCHandler(RPCServer):
 
 
 def main():
+    # Note that in this particular case the parameters specified in the
+    # application configuration file can be overridden by the command-line
+    # parameters.
+    tornado.options.parse_config_file(options.config_file)
     tornado.options.parse_command_line()
     app = Application()
     app.listen(options.port)
