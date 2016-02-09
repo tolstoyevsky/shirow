@@ -16,6 +16,7 @@ import redis
 from tornado import gen
 from tornado.concurrent import Future
 from tornado.escape import json_decode, json_encode
+from tornado.options import options
 from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application
 from tornado.websocket import websocket_connect
@@ -26,6 +27,7 @@ from wsrpc.server import RPCServer, remote
 ENCODED_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.' \
                 'eyJpcCI6IjEyNy4wLjAuMSIsInVzZXJfaWQiOjF9.' \
                 'kYIAQYDjOiZpjExvXZaAgemi4xiisvPEzvXEemmAJLY'
+TOKEN_KEY = 'secret'
 
 
 class MockRPCServer(RPCServer):
@@ -76,6 +78,7 @@ class RPCServerTest(WebSocketBaseTestCase):
         self.close_future = Future()
         redis_conn = redis.StrictRedis(host='localhost', port=6379, db=0)
         redis_conn.set(ENCODED_TOKEN, '')
+        options.token_key = TOKEN_KEY
         return Application([
             ('/rpc', MockRPCServer,
              dict(close_future=self.close_future)),
@@ -98,6 +101,16 @@ class RPCServerTest(WebSocketBaseTestCase):
     def test_passing_non_existent_token(self):
         response = self.fetch('/rpc/token/some.non.existent.token')
         self.assertEqual(response.code, 401)
+
+    def test_using_none_token_key(self):
+        options.token_key = None
+        response = self.fetch('/rpc/token/{}'.format(ENCODED_TOKEN))
+        self.assertEqual(response.code, 500)
+
+    def test_using_wrong_token_key(self):
+        options.token_key = 'wrong_' + TOKEN_KEY
+        response = self.fetch('/rpc/token/{}'.format(ENCODED_TOKEN))
+        self.assertEqual(response.code, 500)
 
     @gen_test
     def test_calling_existent_function(self):

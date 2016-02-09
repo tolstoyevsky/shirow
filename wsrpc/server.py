@@ -86,15 +86,21 @@ class RPCServer(WebSocketHandler):
             token = jwt.decode(encoded_token, options.token_key,
                                algorithm=options.token_algorithm)
         except jwt.exceptions.DecodeError:
+            token = {}
             decoded = False
 
-        self.user_id = token['user_id']
+        self.user_id = token.get('user_id', None)
         return decoded
 
     def _dismiss_request(self):
         self.logger.warning('Authentication request was dismissed')
         self.set_header('WWW-Authenticate', 'Token realm="wsrpc"')
         self.set_status(401)  # Unauthorized
+        self.finish()
+
+    def _fail_request(self, message):
+        self.logger.error(message)
+        self.set_status(500)  # Internal Server Error
         self.finish()
 
     def _open_redis_connection(self):
@@ -116,21 +122,18 @@ class RPCServer(WebSocketHandler):
             return
 
         if options.token_key is None:
-            self.logger.error('A token key must be specified either in the '
-                              'configuration file or on the command line')
-            self.finish()
+            self._fail_request('A token key must be specified either in the '
+                               'configuration file or on the command line')
             return
 
         if not self._open_redis_connection():
-            self.logger.error('wsrpc is not able to connect to Redis')
-            self.finish()
+            self._fail_request('wsrpc is not able to connect to Redis')
             return
 
         if self.redis_conn.exists(encoded_token):
             if not self._decode_token(encoded_token):
-                self.logger.error('An error occurred while decoding the '
-                                  'following token: {}'.format(encoded_token))
-                self.finish()
+                self._fail_request('An error occurred while decoding the '
+                                   'following token: {}'.format(encoded_token))
                 return
 
             # The WebSocket connection request must not contain any parameters.
