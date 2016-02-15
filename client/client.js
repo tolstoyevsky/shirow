@@ -17,7 +17,7 @@
 
 import Events from 'cusdeb-utils';
 
-class RPCClient extends Events {
+class Shirow extends Events {
     static get RETRIES_NUMBER() {
         return 5;
     }
@@ -30,7 +30,7 @@ class RPCClient extends Events {
         super();
 
         if (typeof ws_host !== 'string' || !ws_host.startsWith('ws')) {
-            throw new Error('The ws_host parameter must be started with the ws:// or wss:// URI scheme.')
+            throw new Error('The ws_host parameter must be started with the ws:// or wss:// URI scheme.');
         }
 
         this._attempts = 0;
@@ -55,7 +55,7 @@ class RPCClient extends Events {
     /* Internal methods. */
 
     _log(msg, tracelog) {
-        console[tracelog ? 'trace' : 'log'](`RPCClient: ${msg}`);
+        console[tracelog ? 'trace' : 'log'](`Shirow: ${msg}`);
     }
 
     _register_callback(callback, marker) {
@@ -76,15 +76,15 @@ class RPCClient extends Events {
     }
 
     _connect() {
-        this._rpc = new WebSocket(this._ws_host);
+        this._shirow = new WebSocket(this._ws_host);
 
-        this._rpc.onopen = () => {
+        this._shirow.onopen = () => {
             this._attempts = 0;
             this._is_opened = true;
             this.trigger('ready');
         };
 
-        this._rpc.onclose = () => {
+        this._shirow.onclose = () => {
             this._is_opened = false;
 
             /*
@@ -103,7 +103,7 @@ class RPCClient extends Events {
             }
         };
 
-        this._rpc.onmessage = (event) => {
+        this._shirow.onmessage = (event) => {
             var json = JSON.parse(event.data);
 
             if (json.result) {
@@ -120,9 +120,9 @@ class RPCClient extends Events {
 
                 this._unregister(marker);
             } else {
-                throw json.error
+                throw json.error;
             }
-        }
+        };
     }
 
     _reconnect() {
@@ -153,16 +153,16 @@ class RPCClient extends Events {
      * purposes.
      */
     _disconnect() {
-        if (!this._rpc) {
+        if (!this._shirow) {
             return;
         }
 
-        this._rpc.close();
+        this._shirow.close();
     }
 
     _send(data_str) {
         if (this._is_opened) {
-            this._rpc.send(data_str);
+            this._shirow.send(data_str);
         } else {
             this._queue.push(data_str);
         }
@@ -207,9 +207,9 @@ class RPCClient extends Events {
     emit(procedure_name, ...parameters_list) {
         var that = this;
         /*
-         * The RPC client and server use so called markers to map a remote
+         * The Shirow client and server use so called markers to map a remote
          * procedure call with its return value. To call a remote procedure,
-         * the RPC client sends to the RPC server the name of the procedure, a
+         * the Shirow client sends to the Shirow server the name of the procedure, a
          * list of its input parameters and the marker associated with it. When
          * the procedure is ready to return a result, the server sends to the
          * client the return value and the marker. Then, using the marker, the
@@ -243,4 +243,4 @@ class RPCClient extends Events {
     }
 }
 
-export default RPCClient;
+export default Shirow;

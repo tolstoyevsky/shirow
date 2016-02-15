@@ -1,9 +1,9 @@
 {
-  "name": "wsrpc",
+  "name": "shirow",
   "version": "0.1.0",
-  "description": "wsrpc is an implementation of a distinctive concept of a remote procedure call.",
+  "description": "Shirow is an implementation of a distinctive concept of a remote procedure call.",
   "main": "client/client.js",
-  "homepage": "https://bitbucket.org/eugulixes/wsrpc",
+  "homepage": "https://bitbucket.org/eugulixes/shirow",
   "author": "CusDeb Team",
   "maintainer": {
     "name": "Maxim Karpinskiy",
@@ -11,7 +11,7 @@
   },
   "license": "Apache-2.0",
   "dependencies": {
-    "cusdeb-utils": "^1.0.0"
+    "cusdeb-utils": "^0.0.1"
   },
   "publishConfig": {
     "registry": "https://eugulixes.name/npm"
@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@bitbucket.org/eugulixes/wsrpc.git"
+    "url": "git+ssh://git@bitbucket.org/eugulixes/shirow.git"
   },
   "devDependencies": {
     "babel-core": "^6.3.26",
