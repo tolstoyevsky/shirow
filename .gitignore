@@ -1,9 +1,9 @@
 .idea
+__pycache__
 build
 demo/bundles
 node_modules
-wsrpc/__pycache__
-wsrpc.egg-info
+shirow.egg-info
 static/bundles
 
 npm-debug.log

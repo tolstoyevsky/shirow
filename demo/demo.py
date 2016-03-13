@@ -21,7 +21,7 @@ import tornado.websocket
 import os.path
 from tornado.options import options
 
-from wsrpc.server import RPCServer, remote
+from shirow.server import RPCServer, remote
 
 
 class Application(tornado.web.Application):
