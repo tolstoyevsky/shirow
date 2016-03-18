@@ -12,11 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import logging
+
 import redis
 from tornado import gen
 from tornado.concurrent import Future
 from tornado.escape import json_decode, json_encode
 from tornado.options import options
+from tornado.test.util import unittest
 from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application
 from tornado.websocket import websocket_connect
@@ -180,3 +183,15 @@ class RPCServerTest(WebSocketBaseTestCase):
             'marker': 2
         })
         yield self.close(ws)
+
+
+def main():
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    handler = logging.FileHandler('shirow_test.log')
+    logger.addHandler(handler)
+
+    unittest.main()
+
+if __name__ == '__main__':
+    main()

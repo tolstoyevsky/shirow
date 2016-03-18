@@ -7,5 +7,6 @@ shirow.egg-info
 static/bundles
 
 npm-debug.log
+shirow_test.log
 *.swp
 *.pyc
