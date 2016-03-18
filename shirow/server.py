@@ -37,9 +37,9 @@ define('redis_port', default=6379, help='')
 def remote(func):
     @wraps(func)
     @gen.coroutine
-    def wrapper(*args, **kwargs):
+    def wrapper(self, *args, **kwargs):
         args += tuple(kwargs.values())
-        return func(*args)
+        return func(self, *args)
 
     try:
         defaults_number = len(func.__defaults__)
