@@ -21,8 +21,11 @@ import jwt.exceptions
 import redis
 import tornado
 from tornado import gen
+from tornado.concurrent import futures, run_on_executor
 from tornado.escape import json_decode, json_encode
+from tornado.ioloop import IOLoop
 from tornado.options import define, options
+from tornado.process import cpu_count
 from tornado.websocket import WebSocketHandler
 
 
@@ -36,7 +39,7 @@ define('redis_port', default=6379, help='')
 
 def remote(func):
     @wraps(func)
-    @gen.coroutine
+    @run_on_executor
     def wrapper(self, *args, **kwargs):
         args += tuple(kwargs.values())
         return func(self, *args)
@@ -62,7 +65,9 @@ class RPCServer(WebSocketHandler):
         WebSocketHandler.__init__(self, application, request, **kwargs)
 
         self.config = configparser.ConfigParser()
+        self.executor = futures.ThreadPoolExecutor(cpu_count())
         self.logger = logging.getLogger('tornado.application')
+        self.loop = IOLoop.instance()
         self.redis_conn = None
         self.user_id = None
 
