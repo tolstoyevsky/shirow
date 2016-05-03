@@ -17,15 +17,9 @@
 
 import Events from 'cusdeb-utils';
 
+const RETRIES_NUMBER = 5;
+
 class Shirow extends Events {
-    static get RETRIES_NUMBER() {
-        return 5;
-    }
-
-    get RETRIES_NUMBER() {
-        return this.constructor.RETRIES_NUMBER;
-    }
-
     constructor(ws_host) {
         super();
 
@@ -34,6 +28,7 @@ class Shirow extends Events {
         }
 
         this._attempts = 0;
+        this._cached_res = {};
         this._call_number = 0;
         this._callbacks = {};
         this._queue = [];
@@ -44,10 +39,7 @@ class Shirow extends Events {
 
         this.on('ready', () => {
             this._log('connection is established');
-            this._queue.forEach((e) => {
-                this._send(e);
-            });
-
+            this._queue.forEach(e => this._send(e));
             this._queue.length = 0;
         });
     }
@@ -103,46 +95,44 @@ class Shirow extends Events {
             }
         };
 
-        this._shirow.onmessage = (event) => {
-            var json = JSON.parse(event.data);
+        this._shirow.onmessage = event => this._onmessage(JSON.parse(event.data));
+    }
 
-            if (json.result) {
-                let marker = json.marker;
-                let result = json.result;
-                let cbs = this._callbacks[marker];
+    _onmessage(json = {}) {
+        if (json.result) {
+            let marker = json.marker;
+            let result = json.result;
+            let cbs = this._callbacks[marker];
 
-                if (cbs) {
-                    /* There can be more than one handler function. */
-                    cbs.forEach((cb) => {
-                        result = cb(result);
-                    });
-                }
-
-                this._unregister(marker);
-            } else {
-                throw json.error;
+            if (cbs) {
+                /* There can be more than one handler function. */
+                cbs.forEach(cb => {
+                    result = cb(result);
+                });
             }
-        };
+
+            this._unregister(marker);
+        } else {
+            throw json.error;
+        }
     }
 
     _reconnect() {
-        if (this._attempts < this.RETRIES_NUMBER) {
-            var delay = this._attempts * this._attempts;
+        if (this._attempts < RETRIES_NUMBER) {
+            let delay = this._attempts * this._attempts;
 
             this._log(
                 `connection failed, retrying in ${delay} seconds.`,
                 true
             );
 
-            setTimeout(() => {
-                this._connect();
-            }, delay * 1000);
+            setTimeout(() => this._connect(), delay * 1000);
 
             this._attempts += 1;
 
         } else {
             this._log(
-                `connection failed after ${this.RETRIES_NUMBER} retries.`,
+                `connection failed after ${RETRIES_NUMBER} retries.`,
                 true
             );
         }
@@ -202,10 +192,8 @@ class Shirow extends Events {
         xhr.send();
     }
 
-    /* User visible methods. */
-
-    emit(procedure_name, ...parameters_list) {
-        var that = this;
+    _emit(procedure_name, force=false, ...parameters_list) {
+        let that = this;
         /*
          * The Shirow client and server use so called markers to map a remote
          * procedure call with its return value. To call a remote procedure,
@@ -216,18 +204,43 @@ class Shirow extends Events {
          * client is able to call the corresponding handler function. The call
          * number is used as a marker.
          */
-        var data = {
+        let data = {
             'function_name': procedure_name,
-            'parameters_list': parameters_list,
-            'marker': this._call_number
+            'parameters_list': parameters_list
         };
-        var request_number = this._call_number;
+        let request_number = this._call_number;
+        let cache_key = JSON.stringify(data);
 
-        this._send(JSON.stringify(data));
+        data.marker = request_number;
+        data = JSON.stringify(data);
+
+        // when force is set to true we don't cache the result
+        if (force) {
+            this._send(data);
+        } else {
+            if (!this._cached_res[cache_key]) {
+                this._send(data);
+            } else {
+                setTimeout(() => {
+                    this._onmessage({
+                        result: this._cached_res[cache_key],
+                        marker: request_number
+                    });
+                });
+            }
+        }
+
         this._call_number += 1;
 
         return {
-            then: function (callback) {
+            then: function (fn) {
+                let callback = function (res) {
+                    if (!force) {
+                        that._cached_res[cache_key] = res;
+                    }
+
+                    return fn(res);
+                };
                 that._register_callback(callback, request_number);
                 return this;
             },
@@ -240,6 +253,16 @@ class Shirow extends Events {
                 return this;
             }
         };
+    }
+
+    /* User visible methods. */
+
+    emit(procedure_name, ...parameters_list) {
+        return this._emit(procedure_name, false, ...parameters_list);
+    }
+
+    emitForce(procedure_name, ...parameters_list) {
+        return this._emit(procedure_name, true, ...parameters_list);
     }
 }
 
