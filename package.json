@@ -9,6 +9,7 @@
     "name": "Maxim Karpinskiy",
     "email": "karpinski20@gmail.com"
   },
+  "files": ["client", "LICENSE", "webpack.config.js", "demo/demo.js", "demo/index.htm"],
   "license": "Apache-2.0",
   "dependencies": {
     "cusdeb-utils": "^0.0.1"
