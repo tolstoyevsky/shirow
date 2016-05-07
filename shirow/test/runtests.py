@@ -131,7 +131,8 @@ class RPCServerTest(WebSocketBaseTestCase):
         ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
-            'error': 'the non_existent_function function is undefined'
+            'error': 'the non_existent_function function is undefined',
+            'marker': 1
         })
         yield self.close(ws)
 
@@ -143,14 +144,16 @@ class RPCServerTest(WebSocketBaseTestCase):
         ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
-            'error': 'number of arguments mismatch in the add function call'
+            'error': 'number of arguments mismatch in the add function call',
+            'marker': 1
         })
         # more than is required
         payload = self.prepare_payload('add', [1, 3, 5], 2)
         ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
-            'error': 'number of arguments mismatch in the add function call'
+            'error': 'number of arguments mismatch in the add function call',
+            'marker': 2
         })
         yield self.close(ws)
 
@@ -161,7 +164,8 @@ class RPCServerTest(WebSocketBaseTestCase):
         ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
-            'error': 'an error occurred while executing the function'
+            'error': 'an error occurred while executing the function',
+            'marker': 1
         })
         yield self.close(ws)
 

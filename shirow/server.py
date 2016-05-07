@@ -76,13 +76,14 @@ class RPCServer(WebSocketHandler):
     #
     @gen.coroutine
     def _call_remote_procedure(self, func, *args, **kwargs):
-        response = {'marker': kwargs.pop('marker')}
+        marker = kwargs.pop('marker')
+        response = {'marker': marker}
         try:
             response['result'] = yield func(*args)
         except Exception:
             message = 'an error occurred while executing the function'
             self.logger.exception(message)
-            response = {'error': message}
+            response = {'error': message, 'marker': marker}
         self.write_message(json_encode(response))
 
     def _decode_token(self, encoded_token):
@@ -165,10 +166,10 @@ class RPCServer(WebSocketHandler):
         self.destroy()
 
     def on_message(self, message):
-        ret = {}
         parsed = json_decode(message)
-        function_name = parsed['function_name']
         marker = parsed['marker']
+        ret = {'marker': marker}
+        function_name = parsed['function_name']
         parameters_list = parsed['parameters_list']
         method = getattr(self, function_name, None)
         if function_name in dir(self) and hasattr(method, 'remote'):
