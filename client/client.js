@@ -31,6 +31,7 @@ class Shirow extends Events {
         this._cached_res = {};
         this._call_number = 0;
         this._callbacks = {};
+        this._errors = {};
         this._queue = [];
         this._timeouts = {};
         this._ws_host = ws_host;
@@ -59,11 +60,16 @@ class Shirow extends Events {
         this._timeouts[marker] = timeoutId;
     }
 
+    _register_error(fn, marker) {
+        this._errors[marker] = fn;
+    }
+
     /**
     * will be executed either on message event or after timeout
     */
     _unregister(marker) {
         delete this._callbacks[marker];
+        delete this._errors[marker];
         clearTimeout(this._timeouts[marker]);
     }
 
@@ -99,8 +105,9 @@ class Shirow extends Events {
     }
 
     _onmessage(json = {}) {
+        let marker = json.marker;
+
         if (json.result) {
-            let marker = json.marker;
             let result = json.result;
             let cbs = this._callbacks[marker];
 
@@ -110,11 +117,15 @@ class Shirow extends Events {
                     result = cb(result);
                 });
             }
-
-            this._unregister(marker);
         } else {
-            throw json.error;
+            if (typeof this._errors[marker] === 'function') {
+                this._errors[marker](json.error);
+            } else {
+                console.error(json.error);
+            }
         }
+
+        this._unregister(marker);
     }
 
     _reconnect() {
@@ -251,7 +262,11 @@ class Shirow extends Events {
                 }, time);
                 that._register_timeout(timeoutId, request_number);
                 return this;
-            }
+            },
+            catch: function (fn) {
+                that._register_error(fn, request_number);
+                return this;
+            },
         };
     }
 
