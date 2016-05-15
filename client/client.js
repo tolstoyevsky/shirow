@@ -125,7 +125,9 @@ class Shirow extends Events {
             }
         }
 
-        this._unregister(marker);
+        if (!json.next_frame) {
+            this._unregister(marker);
+        }
     }
 
     _reconnect() {
