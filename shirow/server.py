@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import configparser
 import logging
 from functools import wraps
@@ -21,9 +22,9 @@ import jwt.exceptions
 import redis
 import tornado
 from tornado import gen
+from tornado.platform.asyncio import AsyncIOMainLoop
 from tornado.concurrent import futures, run_on_executor
 from tornado.escape import json_decode, json_encode
-from tornado.ioloop import IOLoop
 from tornado.options import define, options
 from tornado.process import cpu_count
 from tornado.websocket import WebSocketHandler
@@ -60,6 +61,28 @@ def remote(func):
     return wrapper
 
 
+class Singleton(type):
+    instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls.instances:
+            singleton = super(Singleton, cls)
+            cls.instances[cls] = singleton.__call__(*args, **kwargs)
+
+        return cls.instances[cls]
+
+
+class IOLoop(metaclass=Singleton):
+    def __init__(self):
+        self._io_loop = None
+        AsyncIOMainLoop().install()
+
+    def start(self, app, port):
+        app.listen(port)
+        self._io_loop = asyncio.get_event_loop()
+        self._io_loop.run_forever()
+
+
 class RPCServer(WebSocketHandler):
     def __init__(self, application, request, **kwargs):
         WebSocketHandler.__init__(self, application, request, **kwargs)
@@ -67,7 +90,6 @@ class RPCServer(WebSocketHandler):
         self.config = configparser.ConfigParser()
         self.executor = futures.ThreadPoolExecutor(cpu_count())
         self.logger = logging.getLogger('tornado.application')
-        self.loop = IOLoop.instance()
         self.redis_conn = None
         self.user_id = None
 
