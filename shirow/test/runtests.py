@@ -53,8 +53,18 @@ class MockRPCServer(RPCServer):
         1 / 0
 
     @remote
+    def echo(self, message):
+        self.ret(message)
+
+    @remote
     def say_hello(self, name='Shirow'):
         return 'Hello {}!'.format(name)
+
+    @remote
+    def return_more_than_one_value(self):
+        self.ret_and_continue('spam')
+        self.ret_and_continue('ham')
+        self.ret_and_continue('eggs')
 
 
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
@@ -185,6 +195,48 @@ class RPCServerTest(WebSocketBaseTestCase):
         self.assertEqual(json_decode(response), {
             'result': 'Hello Norris!',
             'marker': 2
+        })
+        yield self.close(ws)
+
+    @gen_test
+    def test_using_ret_instead_of_return(self):
+        ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
+        payload = self.prepare_payload('echo', ['Hello!'], 1)
+        ws.write_message(payload)
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'result': 'Hello!',
+            'marker': 1
+        })
+        yield self.close(ws)
+
+    @gen_test
+    def test_returning_more_than_one_value(self):
+        ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
+        payload = self.prepare_payload('return_more_than_one_value', [], 1)
+        ws.write_message(payload)
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'result': 'spam',
+            'next_frame': 1,
+            'marker': 1
+        })
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'result': 'ham',
+            'next_frame': 1,
+            'marker': 1
+        })
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'result': 'eggs',
+            'next_frame': 1,
+            'marker': 1
+        })
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'result': '',
+            'marker': 1
         })
         yield self.close(ws)
 

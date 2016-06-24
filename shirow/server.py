@@ -14,6 +14,7 @@
 
 import asyncio
 import configparser
+import inspect
 import logging
 from functools import wraps
 
@@ -42,6 +43,12 @@ def remote(func):
     @wraps(func)
     @run_on_executor
     def wrapper(self, *args, **kwargs):
+        # The decorator makes a remote procedure signature more flexible. Thus,
+        # a mark must be passed to the procedure as a named argument when it's
+        # called. The mark is stored in a local scope of the decorator where it
+        # can be found through the call stack by the ret_and_continue method of
+        # the RPCServer class.
+        marker = kwargs.pop('marker')
         args += tuple(kwargs.values())
         return func(self, *args)
 
@@ -83,6 +90,12 @@ class IOLoop(metaclass=Singleton):
         self._io_loop.run_forever()
 
 
+class Ret(Exception):
+    def __init__(self, value=None):
+        super(Ret, self).__init__()
+        self.value = value
+
+
 class RPCServer(WebSocketHandler):
     def __init__(self, application, request, **kwargs):
         WebSocketHandler.__init__(self, application, request, **kwargs)
@@ -97,11 +110,13 @@ class RPCServer(WebSocketHandler):
     # Internal methods.
     #
     @gen.coroutine
-    def _call_remote_procedure(self, func, *args, **kwargs):
-        marker = kwargs.pop('marker')
+    def _call_remote_procedure(self, method, arguments_list, marker):
         response = {'marker': marker}
         try:
-            response['result'] = yield func(*args)
+            result = yield method(*arguments_list, marker=marker)
+            response['result'] = result if result is not None else ''
+        except Ret as e:
+            response['result'] = e.value
         except Exception:
             message = 'an error occurred while executing the function'
             self.logger.exception(message)
@@ -178,6 +193,26 @@ class RPCServer(WebSocketHandler):
     def destroy(self):
         pass
 
+    def ret(self, value):
+        """Causes a remote procedure to exit and return the specified value to
+        the RPC client. The return statement can be used instead.
+        """
+        raise Ret(value)
+
+    def ret_and_continue(self, value):
+        """Causes a remote procedure to return the specified value to the RPC
+        client. Unlike ret, the method doesn't cause the procedure to exit.
+        """
+        # the "remote" decorator's stack frame
+        decorator_frame = inspect.stack()[2][0]
+
+        response = {
+            'marker': decorator_frame.f_locals['marker'],
+            'next_frame': 1,
+            'result': value
+        }
+        self.write_message(json_encode(response))
+
     # Implementing the methods inherited from
     # tornado.websocket.WebSocketHandler
 
@@ -191,20 +226,19 @@ class RPCServer(WebSocketHandler):
         parsed = json_decode(message)
         marker = parsed['marker']
         ret = {'marker': marker}
-        function_name = parsed['function_name']
-        parameters_list = parsed['parameters_list']
-        method = getattr(self, function_name, None)
-        if function_name in dir(self) and hasattr(method, 'remote'):
+        procedure_name = parsed['function_name']
+        arguments_list = parsed['parameters_list']
+        method = getattr(self, procedure_name, None)
+        if procedure_name in dir(self) and hasattr(method, 'remote'):
             # Checking if the number of actual arguments passed to a remote
             # procedure matches the number of formal parameters of the remote
             # procedure (except the self argument).
             min, max = method.arguments_range
-            if (max - 1) >= len(parameters_list) >= (min - 1):
-                self._call_remote_procedure(method, *parameters_list,
-                                            marker=marker)
+            if (max - 1) >= len(arguments_list) >= (min - 1):
+                self._call_remote_procedure(method, arguments_list, marker)
             else:
                 ret['error'] = 'number of arguments mismatch in the {} ' \
-                               'function call'.format(function_name)
+                               'function call'.format(procedure_name)
                 self.write_message(json_encode(ret))
         else:
             ret['error'] = 'the {} function is ' \
