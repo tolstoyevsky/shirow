@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import configparser
-import inspect
+import fcntl
 import logging
+import os
 from functools import wraps
 
 import jwt
@@ -23,12 +23,12 @@ import jwt.exceptions
 import redis
 import tornado
 from tornado import gen
-from tornado.platform.asyncio import AsyncIOMainLoop
-from tornado.concurrent import futures, run_on_executor
 from tornado.escape import json_decode, json_encode
+from tornado.ioloop import IOLoop
 from tornado.options import define, options
-from tornado.process import cpu_count
 from tornado.websocket import WebSocketHandler
+
+from shirow.request import Ret, Request
 
 
 define('config_file', default='wsrpc.conf', help='')
@@ -41,14 +41,8 @@ define('redis_port', default=6379, help='')
 
 def remote(func):
     @wraps(func)
-    @run_on_executor
+    @gen.coroutine
     def wrapper(self, *args, **kwargs):
-        # The decorator makes a remote procedure signature more flexible. Thus,
-        # a mark must be passed to the procedure as a named argument when it's
-        # called. The mark is stored in a local scope of the decorator where it
-        # can be found through the call stack by the ret_and_continue method of
-        # the RPCServer class.
-        marker = kwargs.pop('marker')
         args += tuple(kwargs.values())
         return func(self, *args)
 
@@ -68,40 +62,12 @@ def remote(func):
     return wrapper
 
 
-class Singleton(type):
-    instances = {}
-
-    def __call__(cls, *args, **kwargs):
-        if cls not in cls.instances:
-            singleton = super(Singleton, cls)
-            cls.instances[cls] = singleton.__call__(*args, **kwargs)
-
-        return cls.instances[cls]
-
-
-class IOLoop(metaclass=Singleton):
-    def __init__(self):
-        self._io_loop = None
-        AsyncIOMainLoop().install()
-
-    def start(self, app, port):
-        app.listen(port)
-        self._io_loop = asyncio.get_event_loop()
-        self._io_loop.run_forever()
-
-
-class Ret(Exception):
-    def __init__(self, value=None):
-        super(Ret, self).__init__()
-        self.value = value
-
-
 class RPCServer(WebSocketHandler):
     def __init__(self, application, request, **kwargs):
         WebSocketHandler.__init__(self, application, request, **kwargs)
 
         self.config = configparser.ConfigParser()
-        self.executor = futures.ThreadPoolExecutor(cpu_count())
+        self.io_loop = IOLoop.current()
         self.logger = logging.getLogger('tornado.application')
         self.redis_conn = None
         self.user_id = None
@@ -111,17 +77,34 @@ class RPCServer(WebSocketHandler):
     #
     @gen.coroutine
     def _call_remote_procedure(self, method, arguments_list, marker):
-        response = {'marker': marker}
+        pipe_r, pipe_w = os.pipe()
+        self._set_nonblocking(pipe_r)
+        self._set_nonblocking(pipe_w)
+
+        result = None
+        request = Request(pipe_w, marker)
+
+        def response(*args, **kwargs):
+            buffer_size = request.get_bytes_written()
+            res = os.read(pipe_r, buffer_size)
+            self.write_message(res)
+
+        self.io_loop.add_handler(pipe_r, response, self.io_loop.READ)
+
         try:
-            result = yield method(*arguments_list, marker=marker)
-            response['result'] = result if result is not None else ''
-        except Ret as e:
-            response['result'] = e.value
+            result = yield method(request, *arguments_list)
+        except Ret:
+            pass
+            # self.io_loop.remove_handler(pipe_r)
+            # os.close(pipe_r)
+            # os.close(pipe_w)
         except Exception:
             message = 'an error occurred while executing the function'
+            request.ret_error(message)
             self.logger.exception(message)
-            response = {'error': message, 'marker': marker}
-        self.write_message(json_encode(response))
+        finally:
+            if result is not None:
+                request.ret(result)
 
     def _decode_token(self, encoded_token):
         decoded = True
@@ -155,6 +138,10 @@ class RPCServer(WebSocketHandler):
             connected = False
 
         return connected
+
+    def _set_nonblocking(self, fd):
+        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
+        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
 
     @tornado.web.asynchronous
     def get(self, *args, **kwargs):
@@ -193,26 +180,6 @@ class RPCServer(WebSocketHandler):
     def destroy(self):
         pass
 
-    def ret(self, value):
-        """Causes a remote procedure to exit and return the specified value to
-        the RPC client. The return statement can be used instead.
-        """
-        raise Ret(value)
-
-    def ret_and_continue(self, value):
-        """Causes a remote procedure to return the specified value to the RPC
-        client. Unlike ret, the method doesn't cause the procedure to exit.
-        """
-        # the "remote" decorator's stack frame
-        decorator_frame = inspect.stack()[2][0]
-
-        response = {
-            'marker': decorator_frame.f_locals['marker'],
-            'next_frame': 1,
-            'result': value
-        }
-        self.write_message(json_encode(response))
-
     # Implementing the methods inherited from
     # tornado.websocket.WebSocketHandler
 
@@ -232,9 +199,9 @@ class RPCServer(WebSocketHandler):
         if procedure_name in dir(self) and hasattr(method, 'remote'):
             # Checking if the number of actual arguments passed to a remote
             # procedure matches the number of formal parameters of the remote
-            # procedure (except the self argument).
+            # procedure (except self and request).
             min, max = method.arguments_range
-            if (max - 1) >= len(arguments_list) >= (min - 1):
+            if (max - 2) >= len(arguments_list) >= (min - 2):
                 self._call_remote_procedure(method, arguments_list, marker)
             else:
                 ret['error'] = 'number of arguments mismatch in the {} ' \

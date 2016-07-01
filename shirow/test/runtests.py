@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import fcntl
 import logging
+import os
+import pty
 
 import redis
 from tornado import gen
@@ -30,6 +33,7 @@ from shirow.server import RPCServer, remote
 ENCODED_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.' \
                 'eyJpcCI6IjEyNy4wLjAuMSIsInVzZXJfaWQiOjF9.' \
                 'kYIAQYDjOiZpjExvXZaAgemi4xiisvPEzvXEemmAJLY'
+BS = 65536
 TOKEN_KEY = 'secret'
 
 
@@ -45,26 +49,34 @@ class MockRPCServer(RPCServer):
         self.close_future.set_result((self.close_code, self.close_reason))
 
     @remote
-    def add(self, a, b):
-        return a + b
+    def add(self, request, a, b):
+        request.ret(a + b)
 
     @remote
-    def div_by_zero(self):
+    def div_by_zero(self, request):
         1 / 0
 
     @remote
-    def echo(self, message):
-        self.ret(message)
+    def echo(self, request, message):
+        return message
 
     @remote
-    def say_hello(self, name='Shirow'):
+    def say_hello(self, request, name='Shirow'):
         return 'Hello {}!'.format(name)
 
     @remote
-    def return_more_than_one_value(self):
-        self.ret_and_continue('spam')
-        self.ret_and_continue('ham')
-        self.ret_and_continue('eggs')
+    def return_more_than_one_value(self, request):
+        request.ret_and_continue('spam')
+        request.ret_and_continue('ham')
+        request.ret_and_continue('eggs')
+
+    @remote
+    def read_from_fd(self, request, fd):
+        def handler(*args, **kwargs):
+            res = os.read(fd, 65536)
+            request.ret_and_continue(res.decode('utf8'))
+
+        self.io_loop.add_handler(fd, handler, self.io_loop.READ)
 
 
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
@@ -233,12 +245,43 @@ class RPCServerTest(WebSocketBaseTestCase):
             'next_frame': 1,
             'marker': 1
         })
-        response = yield ws.read_message()
-        self.assertEqual(json_decode(response), {
-            'result': '',
-            'marker': 1
-        })
         yield self.close(ws)
+
+    @gen_test
+    def test_pty(self):
+        ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
+
+        pid, fd = pty.fork()
+        if pid == 0:  # child
+            script = (
+                'from time import sleep\n'
+                'for i in ["foo", "bar", "baz", "qux"]: sleep(0.5); print(i)'
+            )
+            command_line = ['python3', '-c', script]
+            os.execvp(command_line[0], command_line)
+        else:  # parent
+            payload = self.prepare_payload('read_from_fd', [fd], 1)
+            ws.write_message(payload)
+            response = yield ws.read_message()
+            self.assertEqual(json_decode(response), {
+                'result': 'foo\r\n',
+                'next_frame': 1,
+                'marker': 1
+            })
+            response = yield ws.read_message()
+            self.assertEqual(json_decode(response), {
+                'result': 'bar\r\n',
+                'next_frame': 1,
+                'marker': 1
+            })
+            response = yield ws.read_message()
+            self.assertEqual(json_decode(response), {
+                'result': 'baz\r\n',
+                'next_frame': 1,
+                'marker': 1
+            })
+
+            yield self.close(ws)
 
 
 def main():
