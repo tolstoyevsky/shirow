@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import fcntl
 import logging
 import os
 import pty
 
+import jwt
 import redis
 from tornado import gen
 from tornado.concurrent import Future
@@ -102,12 +102,12 @@ class RPCServerTest(WebSocketBaseTestCase):
     def get_app(self):
         self.close_future = Future()
         redis_conn = redis.StrictRedis(host='localhost', port=6379, db=0)
-        redis_conn.set(ENCODED_TOKEN, '')
+        redis_conn.setex('user:1:token', 60 * 15, ENCODED_TOKEN)
         options.token_key = TOKEN_KEY
         return Application([
             ('/rpc', MockRPCServer,
              dict(close_future=self.close_future)),
-            ('/rpc/token/([\w\.]+)', MockRPCServer,
+            ('/rpc/token/([_\-\w\.]+)', MockRPCServer,
              dict(close_future=self.close_future)),
         ])
 
@@ -125,7 +125,12 @@ class RPCServerTest(WebSocketBaseTestCase):
 
     def test_passing_non_existent_token(self):
         response = self.fetch('/rpc/token/some.non.existent.token')
-        self.assertEqual(response.code, 401)
+        self.assertEqual(response.code, 500)  # decode error
+        payload = {'user_id': 2, 'ip': '127.0.0.1'}
+        non_existent_token = jwt.encode(payload, 'secret', algorithm='HS256')
+        response = self.fetch('/rpc/token/' +
+                              non_existent_token.decode('utf8'))
+        self.assertEqual(response.code, 401)  # the token isn't in Redis
 
     def test_using_none_token_key(self):
         options.token_key = None

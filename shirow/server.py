@@ -160,12 +160,14 @@ class RPCServer(WebSocketHandler):
             self._fail_request('wsrpc is not able to connect to Redis')
             return
 
-        if self.redis_conn.exists(encoded_token):
-            if not self._decode_token(encoded_token):
-                self._fail_request('An error occurred while decoding the '
-                                   'following token: {}'.format(encoded_token))
-                return
+        decoded_token = self._decode_token(encoded_token)
+        if not decoded_token:
+            self._fail_request('An error occurred while decoding the '
+                               'following token: {}'.format(encoded_token))
+            return
 
+        key = 'user:{}:token'.format(self.user_id)
+        if self.redis_conn.get(key) == encoded_token.encode('utf8'):
             # The WebSocket connection request must not contain any parameters.
             # The only parameter we needed has already been processed. Now we
             # have to get rid of it.
