@@ -29,12 +29,16 @@ from tornado.websocket import websocket_connect
 
 from shirow.server import RPCServer, remote
 
-# jwt.encode({'user_id': 1, 'ip': '127.0.0.1'}, 'secret', algorithm='HS256')
-ENCODED_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.' \
-                'eyJpcCI6IjEyNy4wLjAuMSIsInVzZXJfaWQiOjF9.' \
-                'kYIAQYDjOiZpjExvXZaAgemi4xiisvPEzvXEemmAJLY'
-BS = 65536
+TOKEN_ALGORITHM_ENCODING = 'HS256'
+
 TOKEN_KEY = 'secret'
+
+TOKEN_TTL = 15
+
+USER_ID = 1
+
+ENCODED_TOKEN = jwt.encode({'user_id': USER_ID, 'ip': '127.0.0.1'}, TOKEN_KEY,
+                           algorithm=TOKEN_ALGORITHM_ENCODING).decode('utf8')
 
 
 class MockRPCServer(RPCServer):
@@ -50,25 +54,19 @@ class MockRPCServer(RPCServer):
 
     @remote
     def add(self, request, a, b):
-        request.ret(a + b)
+        return a + b
 
     @remote
     def div_by_zero(self, request):
         1 / 0
 
     @remote
-    def echo(self, request, message):
+    def echo_via_ret_method(self, request, message):
+        request.ret(message)
+
+    @remote
+    def echo_via_return_statement(self, request, message):
         return message
-
-    @remote
-    def say_hello(self, request, name='Shirow'):
-        return 'Hello {}!'.format(name)
-
-    @remote
-    def return_more_than_one_value(self, request):
-        request.ret_and_continue('spam')
-        request.ret_and_continue('ham')
-        request.ret_and_continue('eggs')
 
     @remote
     def read_from_fd(self, request, fd):
@@ -77,6 +75,16 @@ class MockRPCServer(RPCServer):
             request.ret_and_continue(res.decode('utf8'))
 
         self.io_loop.add_handler(fd, handler, self.io_loop.READ)
+
+    @remote
+    def return_more_than_one_value(self, request):
+        request.ret_and_continue('spam')
+        request.ret_and_continue('ham')
+        request.ret_and_continue('eggs')
+
+    @remote
+    def say_hello(self, request, name='Shirow'):
+        return 'Hello {}!'.format(name)
 
 
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
@@ -102,7 +110,9 @@ class RPCServerTest(WebSocketBaseTestCase):
     def get_app(self):
         self.close_future = Future()
         redis_conn = redis.StrictRedis(host='localhost', port=6379, db=0)
-        redis_conn.setex('user:1:token', 60 * 15, ENCODED_TOKEN)
+        key = 'user:{}:token'.format(USER_ID)
+        redis_conn.setex(key, 60 * TOKEN_TTL, ENCODED_TOKEN)
+        options.token_algorithm = TOKEN_ALGORITHM_ENCODING
         options.token_key = TOKEN_KEY
         return Application([
             ('/rpc', MockRPCServer,
@@ -126,8 +136,10 @@ class RPCServerTest(WebSocketBaseTestCase):
     def test_passing_non_existent_token(self):
         response = self.fetch('/rpc/token/some.non.existent.token')
         self.assertEqual(response.code, 500)  # decode error
+
         payload = {'user_id': 2, 'ip': '127.0.0.1'}
-        non_existent_token = jwt.encode(payload, 'secret', algorithm='HS256')
+        non_existent_token = jwt.encode(payload, TOKEN_KEY,
+                                        algorithm=TOKEN_ALGORITHM_ENCODING)
         response = self.fetch('/rpc/token/' +
                               non_existent_token.decode('utf8'))
         self.assertEqual(response.code, 401)  # the token isn't in Redis
@@ -140,15 +152,31 @@ class RPCServerTest(WebSocketBaseTestCase):
     def test_using_wrong_token_key(self):
         options.token_key = 'wrong_' + TOKEN_KEY
         response = self.fetch('/rpc/token/{}'.format(ENCODED_TOKEN))
-        self.assertEqual(response.code, 500)
+        self.assertEqual(response.code, 500)  # decode error
 
     @gen_test
-    def test_calling_existent_function(self):
+    def test_using_ret_method_to_return_value(self):
         ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
-        payload = self.prepare_payload('add', [1, 2], 1)
+        payload = self.prepare_payload('echo_via_ret_method', ['Hello!'], 1)
         ws.write_message(payload)
         response = yield ws.read_message()
-        self.assertEqual(json_decode(response), {'result': 3, 'marker': 1})
+        self.assertEqual(json_decode(response), {
+            'result': 'Hello!',
+            'marker': 1
+        })
+        yield self.close(ws)
+
+    @gen_test
+    def test_using_return_statement_to_return_value(self):
+        ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
+        payload = \
+            self.prepare_payload('echo_via_return_statement', ['Hello!'], 1)
+        ws.write_message(payload)
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'result': 'Hello!',
+            'marker': 1
+        })
         yield self.close(ws)
 
     @gen_test
@@ -181,6 +209,14 @@ class RPCServerTest(WebSocketBaseTestCase):
         self.assertEqual(json_decode(response), {
             'error': 'number of arguments mismatch in the add function call',
             'marker': 2
+        })
+
+        payload = self.prepare_payload('add', [1, 3], 3)
+        ws.write_message(payload)
+        response = yield ws.read_message()
+        self.assertEqual(json_decode(response), {
+            'result': 4,
+            'marker': 3
         })
         yield self.close(ws)
 
@@ -216,18 +252,6 @@ class RPCServerTest(WebSocketBaseTestCase):
         yield self.close(ws)
 
     @gen_test
-    def test_using_ret_instead_of_return(self):
-        ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
-        payload = self.prepare_payload('echo', ['Hello!'], 1)
-        ws.write_message(payload)
-        response = yield ws.read_message()
-        self.assertEqual(json_decode(response), {
-            'result': 'Hello!',
-            'marker': 1
-        })
-        yield self.close(ws)
-
-    @gen_test
     def test_returning_more_than_one_value(self):
         ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
         payload = self.prepare_payload('return_more_than_one_value', [], 1)
@@ -253,7 +277,7 @@ class RPCServerTest(WebSocketBaseTestCase):
         yield self.close(ws)
 
     @gen_test
-    def test_pty(self):
+    def test_reading_from_fd(self):
         ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
 
         pid, fd = pty.fork()
@@ -282,6 +306,12 @@ class RPCServerTest(WebSocketBaseTestCase):
             response = yield ws.read_message()
             self.assertEqual(json_decode(response), {
                 'result': 'baz\r\n',
+                'next_frame': 1,
+                'marker': 1
+            })
+            response = yield ws.read_message()
+            self.assertEqual(json_decode(response), {
+                'result': 'qux\r\n',
                 'next_frame': 1,
                 'marker': 1
             })
