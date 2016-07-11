@@ -23,7 +23,7 @@ import jwt.exceptions
 import redis
 import tornado
 from tornado import gen
-from tornado.escape import json_decode, json_encode
+from tornado.escape import json_decode
 from tornado.ioloop import IOLoop
 from tornado.options import define, options
 from tornado.websocket import WebSocketHandler
@@ -76,28 +76,12 @@ class RPCServer(WebSocketHandler):
     # Internal methods.
     #
     @gen.coroutine
-    def _call_remote_procedure(self, method, arguments_list, marker):
-        pipe_r, pipe_w = os.pipe()
-        self._set_nonblocking(pipe_r)
-        self._set_nonblocking(pipe_w)
-
+    def _call_remote_procedure(self, request, method, arguments_list):
         result = None
-        request = Request(pipe_w, marker)
-
-        def response(*args, **kwargs):
-            buffer_size = request.get_bytes_written()
-            res = os.read(pipe_r, buffer_size)
-            self.write_message(res)
-
-        self.io_loop.add_handler(pipe_r, response, self.io_loop.READ)
-
         try:
             result = yield method(request, *arguments_list)
         except Ret:
             pass
-            # self.io_loop.remove_handler(pipe_r)
-            # os.close(pipe_r)
-            # os.close(pipe_w)
         except Exception:
             message = 'an error occurred while executing the function'
             request.ret_error(message)
@@ -192,9 +176,20 @@ class RPCServer(WebSocketHandler):
         self.destroy()
 
     def on_message(self, message):
+        read_end, write_end = os.pipe()
+        self._set_nonblocking(read_end)
+        self._set_nonblocking(write_end)
+
         parsed = json_decode(message)
-        marker = parsed['marker']
-        ret = {'marker': marker}
+        request = Request(write_end, parsed['marker'])
+
+        def response(*args, **kwargs):
+            buffer_size = request.get_bytes_written()
+            res = os.read(read_end, buffer_size)
+            self.write_message(res)
+
+        self.io_loop.add_handler(read_end, response, self.io_loop.READ)
+
         procedure_name = parsed['function_name']
         arguments_list = parsed['parameters_list']
         method = getattr(self, procedure_name, None)
@@ -204,13 +199,10 @@ class RPCServer(WebSocketHandler):
             # procedure (except self and request).
             min, max = method.arguments_range
             if (max - 2) >= len(arguments_list) >= (min - 2):
-                self._call_remote_procedure(method, arguments_list, marker)
+                self._call_remote_procedure(request, method, arguments_list)
             else:
-                ret['error'] = 'number of arguments mismatch in the {} ' \
-                               'function call'.format(procedure_name)
-                self.write_message(json_encode(ret))
+                request.ret_error('number of arguments mismatch in the {} '
+                                  'function call'.format(procedure_name))
         else:
-            ret['error'] = 'the {} function is ' \
-                           'undefined'.format(parsed['function_name'])
-            self.write_message(json_encode(ret))
-            return
+            request.ret_error('the {} function is '
+                              'undefined'.format(parsed['function_name']))
