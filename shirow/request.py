@@ -13,8 +13,35 @@
 # limitations under the License.
 
 import os
+import reprlib
+import select
 
 from tornado.escape import json_encode
+
+
+PIPE_BUF_LEN = len(str(select.PIPE_BUF))
+
+
+class Response:
+    def __init__(self, data):
+        self._data = data
+        self._data_len = len(data)
+        self._start = 0
+
+    def __iter__(self):
+        while True:
+            buffer_size = \
+                int(self._data[self._start:self._start + PIPE_BUF_LEN])
+            start = self._start + PIPE_BUF_LEN
+            end = start + buffer_size
+            self._start = end
+            yield self._data[start:end]
+
+            if self._data_len == end:
+                return
+
+    def __repr__(self):
+        return 'Response({})'.format(reprlib.repr(self._data))
 
 
 class Ret(Exception):
@@ -26,7 +53,6 @@ class Ret(Exception):
 class Request:
     def __init__(self, fd, marker):
         self._fd = fd
-        self._history = []
         self._marker = marker
 
     def _get_response(self, result, next_frame=False):
@@ -37,11 +63,9 @@ class Request:
 
     def _write(self, response):
         json = json_encode(response)
-        bytes_written = os.write(self._fd, json.encode('utf8'))
-        self._history.append(bytes_written)
-
-    def get_bytes_written(self):
-        return self._history.pop()
+        json_len = len(json)
+        data = str(json_len).zfill(PIPE_BUF_LEN) + json
+        os.write(self._fd, data.encode('utf8'))
 
     def ret(self, value):
         """Causes a remote procedure to exit and return the specified value to

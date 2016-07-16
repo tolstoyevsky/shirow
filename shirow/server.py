@@ -16,6 +16,7 @@ import configparser
 import fcntl
 import logging
 import os
+import select
 from functools import wraps
 
 import jwt
@@ -28,7 +29,7 @@ from tornado.ioloop import IOLoop
 from tornado.options import define, options
 from tornado.websocket import WebSocketHandler
 
-from shirow.request import Ret, Request
+from shirow.request import Response, Ret, Request
 
 
 define('config_file', default='wsrpc.conf', help='')
@@ -183,12 +184,12 @@ class RPCServer(WebSocketHandler):
         parsed = json_decode(message)
         request = Request(write_end, parsed['marker'])
 
-        def response(*args, **kwargs):
-            buffer_size = request.get_bytes_written()
-            res = os.read(read_end, buffer_size)
-            self.write_message(res)
+        def response_cb(*args, **kwargs):
+            data = os.read(read_end, select.PIPE_BUF)
+            for response in Response(data):
+                self.write_message(response)
 
-        self.io_loop.add_handler(read_end, response, self.io_loop.READ)
+        self.io_loop.add_handler(read_end, response_cb, self.io_loop.READ)
 
         procedure_name = parsed['function_name']
         arguments_list = parsed['parameters_list']
