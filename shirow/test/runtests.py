@@ -284,7 +284,7 @@ class RPCServerTest(WebSocketBaseTestCase):
         if pid == 0:  # child
             script = (
                 'from time import sleep\n'
-                'for i in ["foo", "bar", "baz", "qux"]: sleep(0.5); print(i)'
+                'for i in ["foo", "bar", "baz", "qux"]: print(i); sleep(0.5)'
             )
             command_line = ['python3', '-c', script]
             os.execvp(command_line[0], command_line)

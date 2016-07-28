@@ -27,6 +27,7 @@ from tornado import gen
 from tornado.escape import json_decode
 from tornado.ioloop import IOLoop
 from tornado.options import define, options
+from tornado.platform.asyncio import to_asyncio_future
 from tornado.websocket import WebSocketHandler
 
 from shirow.request import Response, Ret, Request
@@ -79,8 +80,9 @@ class RPCServer(WebSocketHandler):
     @gen.coroutine
     def _call_remote_procedure(self, request, method, arguments_list):
         result = None
+        future = to_asyncio_future(method(request, *arguments_list))
         try:
-            result = yield method(request, *arguments_list)
+            result = yield from future
         except Ret:
             pass
         except Exception:
@@ -176,6 +178,7 @@ class RPCServer(WebSocketHandler):
     def on_close(self):
         self.destroy()
 
+    @gen.coroutine
     def on_message(self, message):
         read_end, write_end = os.pipe()
         self._set_nonblocking(read_end)
