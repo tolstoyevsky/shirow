@@ -31,6 +31,7 @@ class Shirow extends Events {
         this._cached_res = {};
         this._call_number = 0;
         this._callbacks = {};
+        this._do_not_reconnect = false;
         this._errors = {};
         this._queue = [];
         this._timeouts = {};
@@ -84,6 +85,10 @@ class Shirow extends Events {
 
         this._shirow.onclose = () => {
             this._is_opened = false;
+
+            if (this._do_not_reconnect) {
+                return;
+            }
 
             /*
              * The WebSocket API doesn't provide any way to get response
@@ -149,18 +154,6 @@ class Shirow extends Events {
                 true
             );
         }
-    }
-
-    /*
-     * Allows closing connection manually. It can be useful for debugging
-     * purposes.
-     */
-    _disconnect() {
-        if (!this._shirow) {
-            return;
-        }
-
-        this._shirow.close();
     }
 
     _send(data_str) {
@@ -273,6 +266,15 @@ class Shirow extends Events {
     }
 
     /* User visible methods. */
+
+    disconnect() {
+        if (!this._shirow) {
+            return;
+        }
+
+        this._do_not_reconnect = true;
+        this._shirow.close();
+    }
 
     emit(procedure_name, ...parameters_list) {
         return this._emit(procedure_name, false, ...parameters_list);
