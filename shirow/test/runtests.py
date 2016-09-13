@@ -259,20 +259,20 @@ class RPCServerTest(WebSocketBaseTestCase):
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'spam',
-            'next_frame': 1,
-            'marker': 1
+            'marker': 1,
+            'eod': 0,
         })
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'ham',
-            'next_frame': 1,
-            'marker': 1
+            'marker': 1,
+            'eod': 0,
         })
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'eggs',
-            'next_frame': 1,
-            'marker': 1
+            'marker': 1,
+            'eod': 0,
         })
         yield self.close(ws)
 
@@ -294,26 +294,26 @@ class RPCServerTest(WebSocketBaseTestCase):
             response = yield ws.read_message()
             self.assertEqual(json_decode(response), {
                 'result': 'foo\r\n',
-                'next_frame': 1,
-                'marker': 1
+                'marker': 1,
+                'eod': 0,
             })
             response = yield ws.read_message()
             self.assertEqual(json_decode(response), {
                 'result': 'bar\r\n',
-                'next_frame': 1,
-                'marker': 1
+                'marker': 1,
+                'eod': 0,
             })
             response = yield ws.read_message()
             self.assertEqual(json_decode(response), {
                 'result': 'baz\r\n',
-                'next_frame': 1,
+                'eod': 0,
                 'marker': 1
             })
             response = yield ws.read_message()
             self.assertEqual(json_decode(response), {
                 'result': 'qux\r\n',
-                'next_frame': 1,
-                'marker': 1
+                'marker': 1,
+                'eod': 0,
             })
 
             yield self.close(ws)

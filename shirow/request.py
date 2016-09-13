@@ -55,10 +55,10 @@ class Request:
         self._fd = fd
         self._marker = marker
 
-    def _get_response(self, result, next_frame=False):
+    def _get_response(self, result, eod=True):
         response = {'marker': self._marker, 'result': result}
-        if next_frame:
-            response['next_frame'] = 1
+        if not eod:
+            response['eod'] = 0
         return response
 
     def _write(self, response):
@@ -78,7 +78,7 @@ class Request:
         """Causes a remote procedure to return the specified value to the RPC
         client. Unlike ret, the method doesn't cause the procedure to exit.
         """
-        self._write(self._get_response(value, True))
+        self._write(self._get_response(value, False))
 
     def ret_error(self, message):
         response = {'marker': self._marker, 'error': message}
