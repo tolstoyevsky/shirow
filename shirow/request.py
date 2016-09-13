@@ -56,9 +56,11 @@ class Request:
         self._marker = marker
 
     def _get_response(self, result, eod=True):
-        response = {'marker': self._marker, 'result': result}
-        if not eod:
-            response['eod'] = 0
+        response = {
+            'eod': 1 if eod else 0,
+            'marker': self._marker,
+            'result': result
+        }
         return response
 
     def _write(self, response):

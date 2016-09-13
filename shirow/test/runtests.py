@@ -162,7 +162,8 @@ class RPCServerTest(WebSocketBaseTestCase):
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello!',
-            'marker': 1
+            'marker': 1,
+            'eod': 1,
         })
         yield self.close(ws)
 
@@ -175,7 +176,8 @@ class RPCServerTest(WebSocketBaseTestCase):
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello!',
-            'marker': 1
+            'marker': 1,
+            'eod': 1,
         })
         yield self.close(ws)
 
@@ -216,7 +218,8 @@ class RPCServerTest(WebSocketBaseTestCase):
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 4,
-            'marker': 3
+            'marker': 3,
+            'eod': 1,
         })
         yield self.close(ws)
 
@@ -240,14 +243,16 @@ class RPCServerTest(WebSocketBaseTestCase):
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello Shirow!',
-            'marker': 1
+            'marker': 1,
+            'eod': 1,
         })
         payload = self.prepare_payload('say_hello', ['Norris'], 2)
         ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello Norris!',
-            'marker': 2
+            'marker': 2,
+            'eod': 1,
         })
         yield self.close(ws)
 
