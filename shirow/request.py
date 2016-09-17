@@ -14,12 +14,12 @@
 
 import os
 import reprlib
-import select
+from select import PIPE_BUF
 
 from tornado.escape import json_encode
 
 
-PIPE_BUF_LEN = len(str(select.PIPE_BUF))
+PIPE_BUF_LEN = len(str(PIPE_BUF))
 
 
 class Response:
@@ -30,10 +30,13 @@ class Response:
 
     def __iter__(self):
         while True:
-            buffer_size = \
-                int(self._data[self._start:self._start + PIPE_BUF_LEN])
+            buffer_size = self._data[self._start:self._start + PIPE_BUF_LEN]
+            if not buffer_size:
+                return
+
+            size = int(buffer_size)
             start = self._start + PIPE_BUF_LEN
-            end = start + buffer_size
+            end = start + size
             self._start = end
             yield self._data[start:end]
 
@@ -55,34 +58,45 @@ class Request:
         self._fd = fd
         self._marker = marker
 
-    def _get_response(self, result, eod=True):
+    #
+    # Internal methods
+    #
+    def _get_error_response(self, message):
+        response = {
+            'error': message,
+            'marker': self._marker,
+        }
+        return json_encode(response)
+
+    def _get_successful_response(self, result, eod=True):
         response = {
             'eod': 1 if eod else 0,
             'marker': self._marker,
-            'result': result
+            'result': result,
         }
-        return response
+        return json_encode(response)
 
     def _write(self, response):
-        json = json_encode(response)
-        json_len = len(json)
-        data = str(json_len).zfill(PIPE_BUF_LEN) + json
+        response_len = len(response)
+        data = str(response_len).zfill(PIPE_BUF_LEN) + response
         os.write(self._fd, data.encode('utf8'))
 
+    #
+    # User visible methods
+    #
     def ret(self, value):
         """Causes a remote procedure to exit and return the specified value to
         the RPC client. The return statement can be used instead.
         """
-        self._write(self._get_response(value))
+        self._write(self._get_successful_response(value))
         raise Ret()
 
     def ret_and_continue(self, value):
         """Causes a remote procedure to return the specified value to the RPC
         client. Unlike ret, the method doesn't cause the procedure to exit.
         """
-        self._write(self._get_response(value, False))
+        self._write(self._get_successful_response(value, False))
 
     def ret_error(self, message):
-        response = {'marker': self._marker, 'error': message}
-        self._write(response)
+        self._write(self._get_error_response(message))
 
