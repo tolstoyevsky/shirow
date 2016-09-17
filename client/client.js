@@ -72,6 +72,7 @@ class Shirow extends Events {
         delete this._callbacks[marker];
         delete this._errors[marker];
         clearTimeout(this._timeouts[marker]);
+        delete this._timeouts[marker];
     }
 
     _connect() {
