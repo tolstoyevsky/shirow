@@ -130,7 +130,7 @@ class Shirow extends Events {
             }
         }
 
-        if (!json.next_frame) {
+        if (json.eod === 1) {
             this._unregister(marker);
         }
     }
