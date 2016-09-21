@@ -14,6 +14,7 @@
 
 import configparser
 import fcntl
+import json
 import logging
 import os
 import select
@@ -73,6 +74,8 @@ class RPCServer(WebSocketHandler):
         self.logger = logging.getLogger('tornado.application')
         self.redis_conn = None
         self.user_id = None
+
+        self._partials = {}
 
     #
     # Internal methods.
@@ -189,8 +192,19 @@ class RPCServer(WebSocketHandler):
 
         def response_cb(*args, **kwargs):
             data = os.read(read_end, select.PIPE_BUF)
-            for response in Response(data):
-                self.write_message(response)
+            for response in Response(data.decode('utf8')):
+                try:
+                    self._partials[read_end] += response
+                except KeyError:
+                    self._partials[read_end] = response
+
+                try:
+                    json.loads(self._partials[read_end])
+                except ValueError:
+                    continue
+
+                self.write_message(self._partials[read_end])
+                self._partials[read_end] = ''
 
         self.io_loop.add_handler(read_end, response_cb, self.io_loop.READ)
 

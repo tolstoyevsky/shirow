@@ -68,6 +68,10 @@ class Request:
         }
         return json_encode(response)
 
+    def _get_len(self, data):
+        data_len = len(data)
+        return str(data_len).zfill(PIPE_BUF_LEN)
+
     def _get_successful_response(self, result, eod=True):
         response = {
             'eod': 1 if eod else 0,
@@ -76,9 +80,21 @@ class Request:
         }
         return json_encode(response)
 
+    def _slice_up(self, data):
+        for i in range(0, len(data), PIPE_BUF):
+            yield data[0 + i:PIPE_BUF + i]
+
     def _write(self, response):
-        response_len = len(response)
-        data = str(response_len).zfill(PIPE_BUF_LEN) + response
+        data = self._get_len(response) + response
+        slices = []
+        if len(data) > PIPE_BUF:
+            slices.append(data[:PIPE_BUF])
+
+            for i in self._slice_up(data[PIPE_BUF:]):
+                slices.append(self._get_len(i) + i)
+
+            data = ''.join(slices)
+
         os.write(self._fd, data.encode('utf8'))
 
     #
