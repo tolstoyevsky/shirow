@@ -13,38 +13,9 @@
 # limitations under the License.
 
 import os
-import reprlib
-from select import PIPE_BUF
+from collections import deque
 
 from tornado.escape import json_encode
-
-
-PIPE_BUF_LEN = len(str(PIPE_BUF))
-
-
-class Response:
-    def __init__(self, data):
-        self._data = data
-        self._data_len = len(data)
-        self._start = 0
-
-    def __iter__(self):
-        while True:
-            buffer_size = self._data[self._start:self._start + PIPE_BUF_LEN]
-            if not buffer_size:
-                return
-
-            size = int(buffer_size)
-            start = self._start + PIPE_BUF_LEN
-            end = start + size
-            self._start = end
-            yield self._data[start:end]
-
-            if self._data_len == end:
-                return
-
-    def __repr__(self):
-        return 'Response({})'.format(reprlib.repr(self._data))
 
 
 class Ret(Exception):
@@ -55,6 +26,8 @@ class Ret(Exception):
 
 class Request:
     def __init__(self, fd, marker):
+        self.responses = deque()
+
         self._fd = fd
         self._marker = marker
 
@@ -68,10 +41,6 @@ class Request:
         }
         return json_encode(response)
 
-    def _get_len(self, data):
-        data_len = len(data)
-        return str(data_len).zfill(PIPE_BUF_LEN)
-
     def _get_successful_response(self, result, eod=True):
         response = {
             'eod': 1 if eod else 0,
@@ -80,26 +49,19 @@ class Request:
         }
         return json_encode(response)
 
-    def _slice_up(self, data):
-        for i in range(0, len(data), PIPE_BUF):
-            yield data[0 + i:PIPE_BUF + i]
-
     def _write(self, response):
-        data = self._get_len(response) + response
-        slices = []
-        if len(data) > PIPE_BUF:
-            slices.append(data[:PIPE_BUF])
-
-            for i in self._slice_up(data[PIPE_BUF:]):
-                slices.append(self._get_len(i) + i)
-
-            data = ''.join(slices)
-
-        os.write(self._fd, data.encode('utf8'))
+        self.responses.append(response)
+        os.write(self._fd, b'x')
 
     #
     # User visible methods
     #
+    def get_response(self):
+        try:
+            return self.responses.popleft()
+        except IndexError:
+            return ''
+
     def ret(self, value):
         """Causes a remote procedure to exit and return the specified value to
         the RPC client. The return statement can be used instead.

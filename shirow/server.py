@@ -14,7 +14,6 @@
 
 import configparser
 import fcntl
-import json
 import logging
 import os
 import select
@@ -31,7 +30,7 @@ from tornado.options import define, options
 from tornado.platform.asyncio import to_asyncio_future
 from tornado.websocket import WebSocketHandler
 
-from shirow.request import Response, Ret, Request
+from shirow.request import Ret, Request
 
 
 define('config_file', default='wsrpc.conf', help='')
@@ -74,8 +73,6 @@ class RPCServer(WebSocketHandler):
         self.logger = logging.getLogger('tornado.application')
         self.redis_conn = None
         self.user_id = None
-
-        self._partials = {}
 
     #
     # Internal methods.
@@ -191,20 +188,9 @@ class RPCServer(WebSocketHandler):
         request = Request(write_end, parsed['marker'])
 
         def response_cb(*args, **kwargs):
-            data = os.read(read_end, select.PIPE_BUF)
-            for response in Response(data.decode('utf8')):
-                try:
-                    self._partials[read_end] += response
-                except KeyError:
-                    self._partials[read_end] = response
-
-                try:
-                    json.loads(self._partials[read_end])
-                except ValueError:
-                    continue
-
-                self.write_message(self._partials[read_end])
-                self._partials[read_end] = ''
+            responses = os.read(read_end, select.PIPE_BUF)
+            for _ in responses:
+                self.write_message(request.get_response())
 
         self.io_loop.add_handler(read_end, response_cb, self.io_loop.READ)
 

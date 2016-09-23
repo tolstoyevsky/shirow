@@ -15,7 +15,6 @@
 import logging
 import os
 import pty
-from select import PIPE_BUF
 
 import jwt
 import redis
@@ -325,9 +324,11 @@ class RPCServerTest(WebSocketBaseTestCase):
             yield self.close(ws)
 
     @gen_test
-    def test_returning_pipe_buf_bytes(self):
-        data1 = 'x' * PIPE_BUF
-        data2 = '.' * PIPE_BUF
+    def test_returning_quite_big_values(self):
+        data_len = 4096
+
+        data1 = 'x' * data_len
+        data2 = '.' * (data_len * 10)
 
         ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
 
