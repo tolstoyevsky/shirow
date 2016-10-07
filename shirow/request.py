@@ -12,9 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-from collections import deque
-
 from tornado.escape import json_encode
 
 
@@ -25,10 +22,8 @@ class Ret(Exception):
 
 
 class Request:
-    def __init__(self, fd, marker):
-        self.responses = deque()
-
-        self._fd = fd
+    def __init__(self, marker, callback):
+        self._callback = callback
         self._marker = marker
 
     #
@@ -50,18 +45,11 @@ class Request:
         return json_encode(response)
 
     def _write(self, response):
-        self.responses.append(response)
-        os.write(self._fd, b'x')
+        self._callback(response)
 
     #
     # User visible methods
     #
-    def get_response(self):
-        try:
-            return self.responses.popleft()
-        except IndexError:
-            return ''
-
     def ret(self, value):
         """Causes a remote procedure to exit and return the specified value to
         the RPC client. The return statement can be used instead.

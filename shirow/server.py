@@ -16,7 +16,6 @@ import configparser
 import fcntl
 import logging
 import os
-import select
 from functools import wraps
 
 import jwt
@@ -185,14 +184,11 @@ class RPCServer(WebSocketHandler):
         self._set_nonblocking(write_end)
 
         parsed = json_decode(message)
-        request = Request(write_end, parsed['marker'])
 
-        def response_cb(*args, **kwargs):
-            responses = os.read(read_end, select.PIPE_BUF)
-            for _ in responses:
-                self.write_message(request.get_response())
+        def cb(response):
+            self.write_message(response)
 
-        self.io_loop.add_handler(read_end, response_cb, self.io_loop.READ)
+        request = Request(parsed['marker'], cb)
 
         procedure_name = parsed['function_name']
         arguments_list = parsed['parameters_list']
