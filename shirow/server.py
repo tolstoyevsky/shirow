@@ -79,19 +79,17 @@ class RPCServer(WebSocketHandler):
     #
     @gen.coroutine
     def _call_remote_procedure(self, request, method, arguments_list):
-        result = None
         future = to_asyncio_future(method(request, *arguments_list))
         try:
             result = yield from future
+            if result is not None:  # if the return statement was used
+                request.ret(result)
         except Ret:
             pass
         except Exception:
             message = 'an error occurred while executing the function'
             request.ret_error(message)
             self.logger.exception(message)
-        finally:
-            if result is not None:
-                request.ret(result)
 
     def _decode_token(self, encoded_token):
         decoded = True
