@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import configparser
 import fcntl
 import logging
 import os
@@ -68,7 +67,6 @@ class RPCServer(WebSocketHandler):
     def __init__(self, application, request, **kwargs):
         WebSocketHandler.__init__(self, application, request, **kwargs)
 
-        self.config = configparser.ConfigParser()
         self.io_loop = IOLoop.current()
         self.logger = logging.getLogger('tornado.application')
         self.redis_conn = None
