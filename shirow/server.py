@@ -30,7 +30,7 @@ from shirow.request import Ret, Request
 
 TOKEN_PATTEN = r'([_\-\w\.]+)'
 
-define('config_file', default='wsrpc.conf', help='')
+define('config_file', default='shirow.conf', help='')
 define('port', default=8888, help='listen on a specific port')
 define('token_algorithm', default='HS256', help='')
 define('token_key', default=None, help='')
@@ -101,7 +101,7 @@ class RPCServer(WebSocketHandler):
 
     def _dismiss_request(self):
         self.logger.warning('Authentication request was dismissed')
-        self.set_header('WWW-Authenticate', 'Token realm="wsrpc"')
+        self.set_header('WWW-Authenticate', 'Token realm="shirow"')
         self.set_status(401)  # Unauthorized
         self.finish()
 
@@ -134,7 +134,7 @@ class RPCServer(WebSocketHandler):
             return
 
         if not self._open_redis_connection():
-            self._fail_request('wsrpc is not able to connect to Redis')
+            self._fail_request('Shirow is not able to connect to Redis')
             return
 
         decoded_token = self._decode_token(encoded_token)
