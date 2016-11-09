@@ -113,6 +113,12 @@ class RPCServer(WebSocketHandler):
         self.set_status(500)  # Internal Server Error
         self.finish()
 
+    def _get_token_key(self, user_id=None):
+        if user_id is None:
+            user_id = self.user_id
+
+        return 'user:{}:token'.format(user_id)
+
     def _open_redis_connection(self):
         self.redis_conn = redis.StrictRedis(host=options.redis_host,
                                             port=options.redis_port, db=0)
@@ -147,7 +153,7 @@ class RPCServer(WebSocketHandler):
                 jwt.encode(payload, options.token_key,
                            algorithm=options.token_algorithm).decode('utf8')
 
-            key = 'user:{}:token'.format(MOCK_USER_ID)
+            key = self._get_token_key(MOCK_USER_ID)
             token_ttl = 15  # seconds
             self.redis_conn.setex(key, 60 * token_ttl, encoded_token)
             self.user_id = MOCK_USER_ID
@@ -158,7 +164,7 @@ class RPCServer(WebSocketHandler):
                                'following token: {}'.format(encoded_token))
             return
 
-        key = 'user:{}:token'.format(self.user_id)
+        key = self._get_token_key()
         if self.redis_conn.get(key) == encoded_token.encode('utf8'):
             # The WebSocket connection request must not contain any parameters.
             # The only parameter we needed has already been processed. Now we
