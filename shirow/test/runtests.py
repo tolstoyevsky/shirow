@@ -27,7 +27,7 @@ from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application
 from tornado.websocket import websocket_connect
 
-from shirow.server import RPCServer, TOKEN_PATTEN, remote
+from shirow.server import RPCServer, MOCK_TOKEN, TOKEN_PATTEN, remote
 
 TOKEN_ALGORITHM_ENCODING = 'HS256'
 
@@ -143,6 +143,15 @@ class RPCServerTest(WebSocketBaseTestCase):
         response = self.fetch('/rpc/token/' +
                               non_existent_token.decode('utf8'))
         self.assertEqual(response.code, 401)  # the token isn't in Redis
+
+    def test_using_mock_token_key(self):
+        options.allow_mock_token = True
+        headers = {
+            'Connection': 'Upgrade',
+            'Upgrade': 'websocket'
+        }
+        response = self.fetch('/rpc/token/' + MOCK_TOKEN, headers=headers)
+        self.assertEqual(response.code, 426)  # Upgrade Required
 
     def test_using_none_token_key(self):
         options.token_key = None

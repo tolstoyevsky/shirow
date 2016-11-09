@@ -28,8 +28,11 @@ from tornado.websocket import WebSocketHandler
 
 from shirow.request import Ret, Request
 
+MOCK_TOKEN = 'mock_token'
+MOCK_USER_ID = -1
 TOKEN_PATTEN = r'([_\-\w\.]+)'
 
+define('allow_mock_token', default=False, help='', type=bool)
 define('config_file', default='shirow.conf', help='')
 define('port', default=8888, help='listen on a specific port')
 define('token_algorithm', default='HS256', help='')
@@ -136,6 +139,18 @@ class RPCServer(WebSocketHandler):
         if not self._open_redis_connection():
             self._fail_request('Shirow is not able to connect to Redis')
             return
+
+        # Prepare mock token if needed
+        if options.allow_mock_token and encoded_token == MOCK_TOKEN:
+            payload = {'user_id': MOCK_USER_ID, 'ip': '127.0.0.1'}
+            encoded_token = \
+                jwt.encode(payload, options.token_key,
+                           algorithm=options.token_algorithm).decode('utf8')
+
+            key = 'user:{}:token'.format(MOCK_USER_ID)
+            token_ttl = 15  # seconds
+            self.redis_conn.setex(key, 60 * token_ttl, encoded_token)
+            self.user_id = MOCK_USER_ID
 
         decoded_token = self._decode_token(encoded_token)
         if not decoded_token:
