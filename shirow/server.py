@@ -12,9 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import fcntl
 import logging
-import os
 from functools import wraps
 
 import jwt
@@ -122,10 +120,6 @@ class RPCServer(WebSocketHandler):
 
         return connected
 
-    def _set_nonblocking(self, fd):
-        flags = fcntl.fcntl(fd, fcntl.F_GETFL)
-        fcntl.fcntl(fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
-
     @tornado.web.asynchronous
     def get(self, *args, **kwargs):
         try:
@@ -176,10 +170,6 @@ class RPCServer(WebSocketHandler):
 
     @gen.coroutine
     def on_message(self, message):
-        read_end, write_end = os.pipe()
-        self._set_nonblocking(read_end)
-        self._set_nonblocking(write_end)
-
         parsed = json_decode(message)
 
         def cb(response):
