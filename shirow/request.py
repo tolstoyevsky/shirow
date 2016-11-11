@@ -44,9 +44,6 @@ class Request:
         }
         return json_encode(response)
 
-    def _write(self, response):
-        self._callback(response)
-
     #
     # User visible methods
     #
@@ -54,15 +51,15 @@ class Request:
         """Causes a remote procedure to exit and return the specified value to
         the RPC client. The return statement can be used instead.
         """
-        self._write(self._get_successful_response(value))
+        self._callback(self._get_successful_response(value))
         raise Ret()
 
     def ret_and_continue(self, value):
         """Causes a remote procedure to return the specified value to the RPC
         client. Unlike ret, the method doesn't cause the procedure to exit.
         """
-        self._write(self._get_successful_response(value, False))
+        self._callback(self._get_successful_response(value, False))
 
     def ret_error(self, message):
-        self._write(self._get_error_response(message))
+        self._callback(self._get_error_response(message))
 
