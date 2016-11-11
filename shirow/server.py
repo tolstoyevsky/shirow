@@ -32,13 +32,22 @@ MOCK_TOKEN = 'mock_token'
 MOCK_USER_ID = -1
 TOKEN_PATTEN = r'([_\-\w\.]+)'
 
-define('allow_mock_token', default=False, help='', type=bool)
-define('config_file', default='shirow.conf', help='')
-define('port', default=8888, help='listen on a specific port')
-define('token_algorithm', default='HS256', help='')
-define('token_key', default=None, help='')
-define('redis_host', default='localhost', help='')
-define('redis_port', default=6379, help='')
+define('allow_mock_token',
+       help="allow using 'mock_token' instead of real token (for testing "
+            "purposes only)", default=False, type=bool)
+define('config_file',
+       help='load parameters from the specified configuration '
+            'file', default='shirow.conf')
+define('port',
+       help='listen on a specific port', default=8888)
+define('token_algorithm',
+       help='specify the algorithm used to sign the token', default='HS256')
+define('token_key',
+       help='encrypt the token using the specified secret key', default=None)
+define('redis_host',
+       help='specify Redis host', default='localhost')
+define('redis_port',
+       help='specify Redis port', default=6379)
 
 
 def remote(func):
