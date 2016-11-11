@@ -15,9 +15,36 @@
  *
  */
 
-import Events from 'cusdeb-utils';
-
 const RETRIES_NUMBER = 5;
+
+class Events {
+    constructor() {
+        this._callbacks = {};
+    }
+
+    on(ev, cb) {
+        let callbacks = this._callbacks;
+
+        if (!callbacks[ev]) {
+            callbacks[ev] = [];
+        }
+
+        callbacks[ev].push(cb);
+    }
+
+    trigger(ev) {
+        var args = Array.from(arguments),
+            callbacks = this._callbacks || (this._callbacks = {});
+
+        if (typeof callbacks[ev] === 'undefined') {
+            return this;
+        }
+
+        for (let i = 0; i < callbacks[ev].length; i++) {
+            callbacks[ev][i].apply(this, args.slice(1));
+        }
+    }
+}
 
 class Shirow extends Events {
     constructor(ws_host) {
