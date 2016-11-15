@@ -73,6 +73,12 @@ def remote(func):
     return wrapper
 
 
+class UndefinedMethod(Exception):
+    """Exception raised when attempting to get a method which either does not
+    exist or is not public."""
+    pass
+
+
 class RPCServer(WebSocketHandler):
     def __init__(self, application, request, **kwargs):
         WebSocketHandler.__init__(self, application, request, **kwargs)
@@ -86,8 +92,19 @@ class RPCServer(WebSocketHandler):
     # Internal methods.
     #
     @gen.coroutine
-    def _call_remote_procedure(self, request, method, arguments_list):
-        future = to_asyncio_future(method(request, *arguments_list))
+    def _call_remote_procedure(self, request, method_name, arguments_list):
+        try:
+            method = self._get_method(method_name)
+        except UndefinedMethod:
+            request.ret_error('the {} function is undefined'.
+                              format(method_name))
+
+        if self._check_number_of_args(method, arguments_list):
+            future = to_asyncio_future(method(request, *arguments_list))
+        else:
+            request.ret_error('number of arguments mismatch in the {} '
+                              'function call'.format(method_name))
+
         try:
             result = yield from future
             if result is not None:  # if the return statement was used
@@ -96,8 +113,18 @@ class RPCServer(WebSocketHandler):
             pass
         except Exception:
             message = 'an error occurred while executing the function'
-            request.ret_error(message)
             self.logger.exception(message)
+            request.ret_error(message)
+
+    def _check_number_of_args(self, method, params):
+        # Checking if the number of actual arguments passed to a remote
+        # procedure matches the number of formal parameters of the remote
+        # procedure (except self and request).
+        min, max = method.arguments_range
+        if (max - 2) >= len(params) >= (min - 2):
+            return True
+
+        return False
 
     def _decode_token(self, encoded_token):
         decoded = True
@@ -127,6 +154,13 @@ class RPCServer(WebSocketHandler):
             user_id = self.user_id
 
         return 'user:{}:token'.format(user_id)
+
+    def _get_method(self, method_name):
+        method = getattr(self, method_name, None)
+        if method_name in dir(self) and hasattr(method, 'remote'):
+            return method
+
+        raise UndefinedMethod
 
     def _open_redis_connection(self):
         self.redis_conn = redis.StrictRedis(host=options.redis_host,
@@ -207,19 +241,10 @@ class RPCServer(WebSocketHandler):
 
         request = Request(parsed['marker'], cb)
 
-        procedure_name = parsed['function_name']
-        arguments_list = parsed['parameters_list']
-        method = getattr(self, procedure_name, None)
-        if procedure_name in dir(self) and hasattr(method, 'remote'):
-            # Checking if the number of actual arguments passed to a remote
-            # procedure matches the number of formal parameters of the remote
-            # procedure (except self and request).
-            min, max = method.arguments_range
-            if (max - 2) >= len(arguments_list) >= (min - 2):
-                self._call_remote_procedure(request, method, arguments_list)
-            else:
-                request.ret_error('number of arguments mismatch in the {} '
-                                  'function call'.format(procedure_name))
-        else:
-            request.ret_error('the {} function is '
-                              'undefined'.format(parsed['function_name']))
+        method_name = parsed['function_name']
+        params = parsed['parameters_list']
+
+        try:
+            yield self._call_remote_procedure(request, method_name, params)
+        except Ret:
+            pass

@@ -62,4 +62,5 @@ class Request:
 
     def ret_error(self, message):
         self._callback(self._get_error_response(message))
+        raise Ret()
 
