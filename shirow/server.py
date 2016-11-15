@@ -33,8 +33,8 @@ MOCK_USER_ID = -1
 TOKEN_PATTEN = r'([_\-\w\.]+)'
 
 define('allow_mock_token',
-       help="allow using 'mock_token' instead of real token (for testing "
-            "purposes only)", default=False, type=bool)
+       help="allow using '{}' instead of real token (for testing "
+            "purposes only)".format(MOCK_TOKEN), default=False, type=bool)
 define('config_file',
        help='load parameters from the specified configuration '
             'file', default='shirow.conf')
