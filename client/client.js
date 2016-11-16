@@ -258,7 +258,9 @@ class Shirow extends Events {
                 setTimeout(() => {
                     this._onmessage({
                         result: this._cached_res[cache_key],
-                        marker: request_number
+                        marker: request_number,
+                        // all cached responses must be end of data
+                        eod: 1
                     });
                 });
             }
