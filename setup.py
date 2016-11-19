@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='shirow',
-      version='0.1',
+      version='0.2',
       description='Shirow is an implementation of a distinctive concept of a ' \
                   'remote procedure call.',
       url='https://bitbucket.org/eugulixes/shirow',
