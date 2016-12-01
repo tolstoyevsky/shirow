@@ -21,12 +21,14 @@ import redis
 from tornado import gen
 from tornado.concurrent import Future
 from tornado.escape import json_decode, json_encode
+from tornado.ioloop import IOLoop
 from tornado.options import options
 from tornado.test.util import unittest
 from tornado.testing import AsyncHTTPTestCase, gen_test
 from tornado.web import Application
 from tornado.websocket import websocket_connect
 
+from shirow import util
 from shirow.server import RPCServer, MOCK_TOKEN, TOKEN_PATTEN, remote
 
 TOKEN_ALGORITHM_ENCODING = 'HS256'
@@ -88,6 +90,11 @@ class MockRPCServer(RPCServer):
 
 
 class WebSocketBaseTestCase(AsyncHTTPTestCase):
+    def setUp(self):
+        super(WebSocketBaseTestCase, self).setUp()
+        IOLoop.configure('tornado.platform.asyncio.AsyncIOLoop')
+        self.io_loop = IOLoop.current()
+
     @gen.coroutine
     def ws_connect(self, path, compression_options=None):
         ws = yield websocket_connect('ws://127.0.0.1:{}{}'.format(
@@ -360,6 +367,11 @@ class RPCServerTest(WebSocketBaseTestCase):
         })
 
         yield self.close(ws)
+
+    @gen_test
+    def test_running_program_asynchronously(self):
+        output = yield util.run(['echo', 'spam'])
+        self.assertEqual(b'spam\n', output)
 
 
 def main():
