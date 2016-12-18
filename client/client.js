@@ -140,7 +140,7 @@ class Shirow extends Events {
     _onmessage(json = {}) {
         let marker = json.marker;
 
-        if (json.result) {
+        if (typeof json.result != 'undefined') {
             let result = json.result;
             let cbs = this._callbacks[marker];
 
