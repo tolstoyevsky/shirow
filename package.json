@@ -1,6 +1,6 @@
 {
   "name": "shirow",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shirow is an implementation of a distinctive concept of a remote procedure call.",
   "main": "client/client.js",
   "homepage": "https://bitbucket.org/eugulixes/shirow",
