@@ -100,7 +100,7 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):
         ws = yield websocket_connect('ws://127.0.0.1:{}{}'.format(
             self.get_http_port(), path
         ), compression_options=compression_options)
-        raise gen.Return(ws)
+        return ws
 
     @gen.coroutine
     def close(self, ws):
