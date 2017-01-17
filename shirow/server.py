@@ -30,7 +30,7 @@ from shirow.request import Ret, Request
 
 MOCK_TOKEN = 'mock_token'
 MOCK_USER_ID = -1
-TOKEN_PATTEN = r'([_\-\w\.]+)'
+TOKEN_PATTERN = r'([_\-\w\.]+)'
 
 define('allow_mock_token',
        help="allow using '{}' instead of real token (for testing "

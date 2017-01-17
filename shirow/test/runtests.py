@@ -29,7 +29,7 @@ from tornado.web import Application
 from tornado.websocket import websocket_connect
 
 from shirow import util
-from shirow.server import RPCServer, MOCK_TOKEN, TOKEN_PATTEN, remote
+from shirow.server import RPCServer, MOCK_TOKEN, TOKEN_PATTERN, remote
 
 TOKEN_ALGORITHM_ENCODING = 'HS256'
 
@@ -124,7 +124,7 @@ class RPCServerTest(WebSocketBaseTestCase):
         return Application([
             ('/rpc', MockRPCServer,
              dict(close_future=self.close_future)),
-            ('/rpc/token/' + TOKEN_PATTEN, MockRPCServer,
+            ('/rpc/token/' + TOKEN_PATTERN, MockRPCServer,
              dict(close_future=self.close_future)),
         ])
 

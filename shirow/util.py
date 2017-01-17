@@ -18,7 +18,7 @@ from tornado import gen
 from tornado.ioloop import IOLoop
 
 
-class SubPorcProtocol(asyncio.SubprocessProtocol):
+class SubProcProtocol(asyncio.SubprocessProtocol):
     def __init__(self, exit_future):
         self.exit_future = exit_future
         self.output = bytearray()
@@ -37,7 +37,7 @@ def run(command_line):
 
     # Create the subprocess controlled by the protocol SubProcProtocol,
     # redirect the standard output into a pipe
-    proc = loop.subprocess_exec(lambda: SubPorcProtocol(exit_future),
+    proc = loop.subprocess_exec(lambda: SubProcProtocol(exit_future),
                                 *command_line,
                                 stdin=None, stderr=None)
     transport, protocol = yield from proc
