@@ -340,35 +340,6 @@ class RPCServerTest(WebSocketBaseTestCase):
             yield self.close(ws)
 
     @gen_test
-    def test_returning_quite_big_values(self):
-        data_len = 4096
-
-        data1 = 'x' * data_len
-        data2 = '.' * (data_len * 10)
-
-        ws = yield self.ws_connect('/rpc/token/{}'.format(ENCODED_TOKEN))
-
-        payload = self.prepare_payload('echo_via_ret_method', [data1], 1)
-        ws.write_message(payload)
-        response = yield ws.read_message()
-        self.assertEqual(json_decode(response), {
-            'result': data1,
-            'marker': 1,
-            'eod': 1,
-        })
-
-        payload = self.prepare_payload('echo_via_ret_method', [data2], 2)
-        ws.write_message(payload)
-        response = yield ws.read_message()
-        self.assertEqual(json_decode(response), {
-            'result': data2,
-            'marker': 2,
-            'eod': 1,
-        })
-
-        yield self.close(ws)
-
-    @gen_test
     def test_running_program_asynchronously(self):
         output = yield util.run(['echo', 'spam'])
         self.assertEqual(b'spam\n', output)
