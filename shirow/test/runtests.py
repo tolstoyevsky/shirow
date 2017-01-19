@@ -74,6 +74,9 @@ class MockRPCServer(RPCServer):
     def read_from_fd(self, request, fd):
         def handler(*args, **kwargs):
             res = os.read(fd, 65536)
+            if res == b'qux\r\n':
+                request.ret(res.decode('utf8'))
+
             request.ret_and_continue(res.decode('utf8'))
 
         self.io_loop.add_handler(fd, handler, self.io_loop.READ)
@@ -334,7 +337,7 @@ class RPCServerTest(WebSocketBaseTestCase):
             self.assertEqual(json_decode(response), {
                 'result': 'qux\r\n',
                 'marker': 1,
-                'eod': 0,
+                'eod': 1,
             })
 
             yield self.close(ws)
