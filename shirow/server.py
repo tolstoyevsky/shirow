@@ -226,6 +226,13 @@ class RPCServer(WebSocketHandler):
     # Implementing the methods inherited from
     # tornado.websocket.WebSocketHandler
 
+    def log_exception(self, typ, value, tb):
+        """Logs uncaught exceptions. This overrides the method in
+        WebSocketHandler not to log exceptions derived from Ret.
+        """
+        if not isinstance(value, Ret):
+            WebSocketHandler.log_exception(self, typ, value, tb)
+
     def open(self):
         self.create()
 
