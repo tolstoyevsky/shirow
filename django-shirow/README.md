@@ -1,3 +1,5 @@
+[![pypi](https://img.shields.io/pypi/v/django-shirow.svg)](https://pypi.org/project/django-shirow/)
+
 # Django Shirow
 
 To connect to the RPC servers based on [Shirow](https://github.com/tolstoyevsky/shirow), clients have to be authenticated using the [Django authentication system](https://docs.djangoproject.com/en/2.0/topics/auth/). Thus, the package provides the `create_token_if_needed` decorator which is intended for Django views. First, the decorator tries to obtain a token from Redis. Then, in case the try doesn't succeed, `create_token_if_needed` will create and put it into Redis and the user's session. Finally, the client can get the token from the session and prove the RPC server he/she is an authenticated user.
