@@ -1,0 +1,3 @@
+pyjwt
+pypandoc # only for converting README.md
+redis
