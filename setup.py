@@ -1,8 +1,13 @@
+import re
 from setuptools import setup
 
 try:
     import pypandoc
-    long_description = pypandoc.convert('README.md', 'rst')
+    with open('README.md', 'r') as f:
+        long_description = re.sub('</?p[^>]*>', '', f.read())
+        long_description = re.sub('<img[^>]*>', '', long_description)
+        long_description = pypandoc.convert_text(long_description, 'rst',
+                                                 format='md')
 except ImportError:
     long_description = ('Shirow is an implementation of a distinctive concept '
                         'of a remote procedure call.')
