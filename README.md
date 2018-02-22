@@ -1,3 +1,5 @@
+[![pypi](https://img.shields.io/pypi/v/shirow.svg)](https://pypi.org/project/shirow/)
+
 # Shirow
 
 <p align="center">
