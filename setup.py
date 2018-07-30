@@ -24,7 +24,7 @@ setup(name='shirow',
       license='http://www.apache.org/licenses/LICENSE-2.0',
       packages=['shirow'],
       install_requires=[
-          'tornado',
+          'tornado==4.5.3',
           'redis',
           'pyjwt'
       ])
