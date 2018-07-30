@@ -130,7 +130,7 @@ class RPCServer(WebSocketHandler):
         decoded = True
         try:
             token = jwt.decode(encoded_token, options.token_key,
-                               algorithm=options.token_algorithm)
+                               algorithms=[options.token_algorithm])
         except jwt.exceptions.DecodeError:
             token = {}
             decoded = False
