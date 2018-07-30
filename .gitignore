@@ -2,9 +2,10 @@
 __pycache__
 build
 demo/bundles
+dist
 node_modules
-shirow.egg-info
 static/bundles
+*.egg-info
 
 npm-debug.log
 shirow_test.log
