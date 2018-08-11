@@ -3,7 +3,7 @@
   "version": "0.3.0",
   "description": "Shirow is an implementation of a distinctive concept of a remote procedure call.",
   "main": "client/client.js",
-  "homepage": "https://bitbucket.org/eugulixes/shirow",
+  "homepage": "https://github.com/tolstoyevsky/shirow",
   "author": "CusDeb Team",
   "maintainer": {
     "name": "Maxim Karpinskiy",
@@ -27,7 +27,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@bitbucket.org/eugulixes/shirow.git"
+    "url": "https://github.com/tolstoyevsky/shirow.git"
   },
   "devDependencies": {
     "babel-core": "^6.3.26",
