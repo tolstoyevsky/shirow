@@ -14,11 +14,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os.path
+import base64
+import uuid
+
 import tornado.ioloop
 import tornado.options
 import tornado.web
 import tornado.websocket
-import os.path
 from tornado.options import options
 
 from shirow.server import RPCServer, remote
@@ -31,7 +34,7 @@ class Application(tornado.web.Application):
             (r'/rpc/token/([\w\.]+)', RPCHandler),
         ]
         settings = dict(
-            cookie_secret='__TODO:_GENERATE_YOUR_OWN_RANDOM_VALUE_HERE__',
+            cookie_secret=base64.b64encode(uuid.uuid4().bytes + uuid.uuid4().bytes),
             template_path=os.path.join(os.path.dirname(__file__), './'),
             static_path=os.path.join(os.path.dirname(__file__), './'),
             xsrf_cookies=True,
@@ -41,13 +44,13 @@ class Application(tornado.web.Application):
 
 class MainHandler(tornado.web.RequestHandler):
     def get(self):
-        self.render('index.htm')
+        self.render('index.html')
 
 
 class RPCHandler(RPCServer):
     @remote
-    def get_packages_list(self, page_number, quantity):
-        return '{}, {}'.format(page_number, quantity)
+    def say_hello(self, _request, name):
+        return 'Hello, {}!'.format(name if name else 'Anonymous')
 
 
 def main():

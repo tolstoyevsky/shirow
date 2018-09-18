@@ -15,16 +15,15 @@
  *
  */
 
-import RPCClient from '../client/client.js';
+$(document).ready(function () {
+    const token = 'mock_token'; // mock token (for testing only)
+    let client = new Shirow('ws://localhost:8888/rpc/token/' + token);
 
-var client = new RPCClient('ws://localhost:8888/rpc/token/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpcCI6IjEyNy4wLjAuMSIsInVzZXJfaWQiOjF9.kYIAQYDjOiZpjExvXZaAgemi4xiisvPEzvXEemmAJLY');
-
-client.on('ready', function() {
-    client.emit('get_packages_list', 1, 100).then(data => {
-        console.log(data);
-    });
-
-    client.emit('get_packages_list', 2, 100).then(data => {
-        console.log(data);
+    client.on('ready', function () {
+        $("#btn").click(function () {
+            client.emit('say_hello', $("#inp").val()).then(data => {
+                $("#res").text(data);
+            });
+        });
     });
 });
