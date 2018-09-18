@@ -1,4 +1,4 @@
 pyjwt
 pypandoc # only for converting README.md
 redis
-tornado==4.5.3
+tornado==5.1
