@@ -1,3 +1,4 @@
+django==1.11
 pyjwt
 pypandoc # only for converting README.md
 redis
