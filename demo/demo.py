@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 
-# Copyright 2016 Evgeny Golyshev. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#    http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+"""
+Copyright 2016 Evgeny Golyshev. All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
 
 import os.path
 import base64
@@ -28,6 +30,9 @@ from shirow.server import RPCServer, remote
 
 
 class Application(tornado.web.Application):
+    """
+    Main application class
+    """
     def __init__(self):
         handlers = [
             (r'/', MainHandler),
@@ -43,20 +48,28 @@ class Application(tornado.web.Application):
 
 
 class MainHandler(tornado.web.RequestHandler):
+    """
+    Class for HTTP request handlers
+    """
     def get(self):
         self.render('index.html')
 
 
 class RPCHandler(RPCServer):
+    """
+    Class for websocket RPC request handlers
+    """
     @remote
     def say_hello(self, _request, name):
         return 'Hello, {}!'.format(name if name else 'Anonymous')
 
 
 def main():
-    # Note that in this particular case the parameters specified in the
-    # application configuration file can be overridden by the command-line
-    # parameters.
+    """
+    Note that in this particular case the parameters specified in the
+    application configuration file can be overridden by the command-line
+    parameters.
+    """
     tornado.options.parse_config_file(options.config_file)
     tornado.options.parse_command_line()
     app = Application()

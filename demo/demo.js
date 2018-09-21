@@ -15,15 +15,15 @@
  *
  */
 
-$(document).ready(function () {
-    const token = 'mock_token'; // mock token (for testing only)
-    let client = new Shirow('ws://localhost:8888/rpc/token/' + token);
+import RPCClient from '../client/client.js';
 
-    client.on('ready', function () {
-        $("#btn").click(function () {
-            client.emit('say_hello', $("#inp").val()).then(data => {
-                $("#res").text(data);
-            });
+const token = 'mock_token'; // mock token (for testing only)
+const client = new RPCClient('ws://localhost:8888/rpc/token/' + token);
+
+client.on('ready', function () {
+    $("#btn").click(function () {
+        client.emit('say_hello', $("#inp").val()).then(data => {
+            $("#res").text(data);
         });
     });
 });
