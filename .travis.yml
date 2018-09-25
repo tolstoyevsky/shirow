@@ -1,0 +1,25 @@
+language: python
+
+python:
+  - '3.5'
+  - '3.6'
+
+before_install:
+  - pip3 install -r requirements.txt
+  - pip3 install -r django-shirow/requirements.txt
+  - pip3 install pylint
+
+script:
+  - python3 -m tornado.testing tornado.test.stack_context_test
+  - pylint shirow/
+  - pylint django-shirow/django_shirow/
+  - pylint setup.py
+  - nvm install-latest-npm
+  - npm install --dev
+  - npm run lint
+
+cache:
+  directories:
+    - node_modules
+  sudo: false
+
