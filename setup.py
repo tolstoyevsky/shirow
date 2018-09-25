@@ -1,3 +1,5 @@
+"""Setup package info. """
+
 import re
 from setuptools import setup
 

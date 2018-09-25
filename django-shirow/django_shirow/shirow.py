@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Django authentication package. """
+
 from functools import wraps
 
 import jwt
@@ -21,9 +23,8 @@ from django.conf import settings
 
 
 def create_token_if_needed(func):
-    """
-    Tries to obtain a token from Redis. In case the try doesn't succeed, the
-    decorator will create and put it into Redis and the user's session.
+    """Tries to obtain a token from Redis. In case the try doesn't succeed,
+    the decorator will create and put it into Redis and the user's session.
     """
 
     algorithm = getattr(settings, 'TOKEN_ALGORITHM_ENCODING', 'HS256')

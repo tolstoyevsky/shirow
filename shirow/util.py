@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Toolbox of useful functions. """
+
 from subprocess import PIPE
 
 from tornado import gen

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Define server side for remote procedures calling. """
+
 import logging
 from functools import wraps
 
@@ -51,6 +53,8 @@ define('redis_port',
 
 
 def remote(func):
+    """Unpacks named arguments and set attributes to wrapping function. """
+
     @wraps(func)
     @gen.coroutine
     def wrapper(self, *args, **kwargs):
@@ -74,12 +78,16 @@ def remote(func):
 
 
 class UndefinedMethod(Exception):
-    """Exception raised when attempting to get a method which either does not
-    exist or is not public."""
+    """Exception raised when attempting to get a method which either does
+    not exist or is not public.
+    """
+
     pass
 
 
 class RPCServer(WebSocketHandler):
+    """Definition of the server side for remote procedures calling. """
+
     def __init__(self, application, request, **kwargs):
         WebSocketHandler.__init__(self, application, request, **kwargs)
 
@@ -116,12 +124,15 @@ class RPCServer(WebSocketHandler):
             self.logger.exception(message)
             request.ret_error(message)
 
-    def _check_number_of_args(self, method, params):
-        # Checking if the number of actual arguments passed to a remote
-        # procedure matches the number of formal parameters of the remote
-        # procedure (except self and request).
-        min, max = method.arguments_range
-        if (max - 2) >= len(params) >= (min - 2):
+    @staticmethod
+    def _check_number_of_args(method, params):
+        """Check if the number of actual arguments passed to a remote
+        procedure matches the number of formal parameters of the remote
+        procedure (except self and request).
+        """
+
+        min_num, max_num = method.arguments_range
+        if (max_num - 2) >= len(params) >= (min_num - 2):
             return True
 
         return False
@@ -218,18 +229,23 @@ class RPCServer(WebSocketHandler):
             self._dismiss_request()
 
     def create(self):
+        """Dumps the inherited methods. """
+
         pass
 
     def destroy(self):
+        """Dumps the inherited methods. """
+
         pass
 
     # Implementing the methods inherited from
     # tornado.websocket.WebSocketHandler
 
     def log_exception(self, typ, value, tb):
-        """Logs uncaught exceptions. This overrides the method in
+        """Handle the ncaught logs exceptions. This overrides the method in
         WebSocketHandler not to log exceptions derived from Ret.
         """
+
         if not isinstance(value, Ret):
             WebSocketHandler.log_exception(self, typ, value, tb)
 
@@ -241,12 +257,13 @@ class RPCServer(WebSocketHandler):
 
     @gen.coroutine
     def on_message(self, message):
+        print(message)
         parsed = json_decode(message)
 
-        def cb(response):
+        def callback_func(response):
             self.write_message(response)
 
-        request = Request(parsed['marker'], cb)
+        request = Request(parsed['marker'], callback_func)
 
         method_name = parsed['function_name']
         params = parsed['parameters_list']

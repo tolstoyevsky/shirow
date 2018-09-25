@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Definition for the class of asynchronous IOLoop. """
+
 import asyncio
 
 from tornado.platform.asyncio import AsyncIOMainLoop
 
 
 class Singleton(type):
+    """Implement the singletone class. """
+
     instances = {}
 
     def __call__(cls, *args, **kwargs):
@@ -29,11 +33,19 @@ class Singleton(type):
 
 
 class IOLoop(metaclass=Singleton):
+    """Class to generate the instance of input/output loop
+    if not already exist.
+    """
+
     def __init__(self):
         self._io_loop = None
         AsyncIOMainLoop().install()
 
     def start(self, app, port):
+        """Starts event loop for given application
+        on given port.
+        """
+
         app.listen(port)
         self._io_loop = asyncio.get_event_loop()
         self._io_loop.run_forever()
