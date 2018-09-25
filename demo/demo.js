@@ -15,16 +15,16 @@
  *
  */
 
-import RPCClient from '../client/client.js';
+import RPCClient from '../client/client.js'
 
-var client = new RPCClient('ws://localhost:8888/rpc/token/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpcCI6IjEyNy4wLjAuMSIsInVzZXJfaWQiOjF9.kYIAQYDjOiZpjExvXZaAgemi4xiisvPEzvXEemmAJLY');
+var client = new RPCClient('ws://localhost:8888/rpc/token/eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpcCI6IjEyNy4wLjAuMSIsInVzZXJfaWQiOjF9.kYIAQYDjOiZpjExvXZaAgemi4xiisvPEzvXEemmAJLY')
 
-client.on('ready', function() {
-    client.emit('get_packages_list', 1, 100).then(data => {
-        console.log(data);
-    });
+client.on('ready', function () {
+  client.emit('get_packages_list', 1, 100).then(data => {
+    console.log(data)
+  })
 
-    client.emit('get_packages_list', 2, 100).then(data => {
-        console.log(data);
-    });
-});
+  client.emit('get_packages_list', 2, 100).then(data => {
+    console.log(data)
+  })
+})
