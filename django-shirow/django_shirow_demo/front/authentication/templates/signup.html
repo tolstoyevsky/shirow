@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block css  %}
+<link rel="stylesheet" href="{% static 'css/signup.css' %}" type="text/css"/>
+{% endblock %}
+
+{% block content %}
+<div id="signup">
+    <div class="container">
+        <div id="signup-row" class="row justify-content-center align-items-center">
+            <div id="signup-column" class="col-md-6 col-md-offset-3">
+                <div id="signup-box" class="col-md-6 col-md-offset-3">
+                    <form method="post">
+                        <h3>Sign up</h3>
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                        <button type="submit" class="btn btn-info btn-md">Sign up</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

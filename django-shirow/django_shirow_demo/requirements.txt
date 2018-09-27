@@ -1,0 +1,16 @@
+certifi==2018.8.24
+chardet==3.0.4
+Django==1.11
+django-shirow==0.3
+docker==3.5.0
+docker-pycreds==0.3.0
+idna==2.7
+PyJWT==1.6.4
+pytz==2018.5
+redis==2.10.6
+requests==2.19.1
+shirow==0.3
+six==1.11.0
+tornado==5.1
+urllib3==1.23
+websocket-client==0.53.0

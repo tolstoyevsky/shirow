@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Home{% endblock %}
+
+{% block css  %}
+<link rel="stylesheet" href="{% static 'css/home.css' %}" type="text/css"/>
+{% endblock %}
+
+{% block scripts %}
+{% if user.is_authenticated %}
+<script src="{% static 'bundles/main.js' %}"></script>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div id="home">
+    {% if user.is_authenticated %}
+    <div class="container">
+
+        <ul class="nav nav-tabs">
+            <li class="active"><a data-toggle="tab" href="#images">Images</a></li>
+            <li><a data-toggle="tab" href="#containers">Containers</a></li>
+            <li style="float:right;line-height:45px;background-color:#d8f0f3;border-radius:5px;"><a href="{% url 'logout' %}">logout</a></li>
+            <li style="visibility: hidden"><p id="token">{{ request.session.token }}</p></li>
+        </ul>
+
+        <div class="tab-content">
+            <div id="images" class="tab-pane fade in active">
+                <h3>Images list</h3>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div style="margin: 10px;">
+                            <div class="list-group" id="images-list" role="tablist">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="containers" class="tab-pane fade">
+                <h3>Containers list</h3>
+                <div class="row">
+                    <div class="col-md-8">
+                        <div style="margin: 10px;">
+                            <div class="list-group" id="containers-list" role="tablist">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div style="margin: 10px;">
+                            <ul class="nav nav-pills nav-stacked" id="containers-pills" style="margin: 20px;">
+                                <li class="active"><a href="#">All</a></li>
+                                <li><a href="#">Started</a></li>
+                            </ul>
+                            <div class="panel panel-default" style="margin: 20px; margin-top: 50px;">
+                                <div class="panel-heading">Choose docker container</div>
+                                <div class="panel-body" style="text-align: center;">
+                                    <button type="button" class="btn btn-success" id="start" disabled>Start</button>
+                                    <button type="button" class="btn btn-warning" id="stop" disabled>Stop</button>
+                                    <button type="button" class="btn btn-danger" id="remove" disabled>Remove</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+    {% else %}
+    <div class="container">
+        <div id="home-row" class="row">
+            <div id="home-column" class="col-md-6 col-md-offset-3">
+                <div id="home-box" class="col-md-6 col-md-offset-3">
+                    <h3>You are not logged in</h3>
+                    <div class="btn-group">
+                        <p><a class="btn btn-info btn-md" href="{% url 'login' %}">login</a></p>
+                        <p><a class="btn btn-info btn-md" href="{% url 'signup' %}">signup</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

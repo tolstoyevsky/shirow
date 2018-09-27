@@ -1,0 +1,33 @@
+{
+  "name": "shirow_django_demo",
+  "version": "0.0.1",
+  "description": "Shirow-Django demo.",
+  "main": "authentication/static/client.js",
+  "homepage": "https://github.com/tolstoyevsky/shirow",
+  "author": "CusDeb Team",
+  "maintainer": {
+    "name": "Anton Maksimovich",
+    "email": "antonio.maksimovich@gmail.com"
+  },
+  "files": [
+    "webpack.config.js",
+    "authentication/static/demo.js",
+    "authentication/static/client.js"
+  ],
+  "license": "Apache-2.0",
+  "dependencies": {},
+  "scripts": {
+    "shirow_django_demo": "webpack",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tolstoyevsky/shirow.git"
+  },
+  "devDependencies": {
+    "babel-core": "^6.3.26",
+    "babel-loader": "^6.2.0",
+    "babel-preset-es2015": "^6.3.13",
+    "webpack": "^1.12.9"
+  }
+}

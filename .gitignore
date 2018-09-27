@@ -1,13 +1,13 @@
 .idea
 __pycache__
 build
-demo/bundles
+bundles
 dist
 node_modules
-static/bundles
 *.egg-info
 
 npm-debug.log
 shirow_test.log
 *.swp
 *.pyc
+db.sqlite3

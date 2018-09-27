@@ -1,0 +1,9 @@
+#home .container #home-row #home-column #home-box {
+    margin-top: 120px;
+    border-radius: 12px;
+}
+
+#home-box{
+    text-align: center;
+    width: 300px;
+}
