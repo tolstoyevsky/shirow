@@ -19,10 +19,10 @@ from tornado.process import Subprocess
 
 
 @gen.coroutine
-def execute_async(command_line):
+def execute_async(command_line, env=None):
     """Executes the specified command line asynchronously. """
 
-    process = Subprocess(command_line, stdout=PIPE, stderr=PIPE)
+    process = Subprocess(command_line, env=env, stdout=PIPE, stderr=PIPE)
     ret = yield process.wait_for_exit(raise_error=False)
     out, err = process.stdout.read(), process.stderr.read()
     process.stdout.close()
