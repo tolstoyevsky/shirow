@@ -17,8 +17,8 @@ import os
 import pty
 import sys
 
+import fakeredis
 import jwt
-import redis
 from tornado import gen
 from tornado.concurrent import Future
 from tornado.escape import json_decode, json_encode
@@ -45,6 +45,13 @@ ENCODED_TOKEN = jwt.encode({'user_id': USER_ID, 'ip': '127.0.0.1'}, TOKEN_KEY,
 
 
 class MockRPCServer(RPCServer):
+    def __init__(self, application, request, **kwargs):
+        super(MockRPCServer, self).__init__(application, request, **kwargs)
+
+        self.redis_conn = fakeredis.FakeStrictRedis()
+        key = 'user:{}:token'.format(USER_ID)
+        self.redis_conn.setex(key, 60 * TOKEN_TTL, ENCODED_TOKEN)
+
     def initialize(self, close_future, compression_options=None):
         self.close_future = close_future
         self.compression_options = compression_options
@@ -131,9 +138,6 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):
 class RPCServerTest(WebSocketBaseTestCase):
     def get_app(self):
         self.close_future = Future()
-        redis_conn = redis.StrictRedis(host='localhost', port=6379, db=0)
-        key = 'user:{}:token'.format(USER_ID)
-        redis_conn.setex(key, 60 * TOKEN_TTL, ENCODED_TOKEN)
         options.token_algorithm = TOKEN_ALGORITHM_ENCODING
         options.token_key = TOKEN_KEY
         return Application([

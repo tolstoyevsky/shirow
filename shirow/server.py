@@ -163,8 +163,9 @@ class RPCServer(WebSocketHandler):
         raise UndefinedMethod
 
     def _open_redis_connection(self):
-        self.redis_conn = redis.StrictRedis(host=options.redis_host,
-                                            port=options.redis_port, db=0)
+        if not self.redis_conn:
+            self.redis_conn = redis.StrictRedis(host=options.redis_host,
+                                                port=options.redis_port, db=0)
         try:
             connected = True if self.redis_conn.ping() else False
         except redis.exceptions.ConnectionError:
