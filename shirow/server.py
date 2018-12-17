@@ -15,6 +15,7 @@
 import logging
 from functools import wraps
 
+import fakeredis
 import jwt
 import jwt.exceptions
 import redis
@@ -162,10 +163,13 @@ class RPCServer(WebSocketHandler):
 
         raise UndefinedMethod
 
-    def _open_redis_connection(self):
+    def _open_redis_connection(self,encoded_token):
         if not self.redis_conn:
-            self.redis_conn = redis.StrictRedis(host=options.redis_host,
-                                                port=options.redis_port, db=0)
+            if encoded_token == MOCK_TOKEN:
+                self.redis_conn = fakeredis.FakeStrictRedis()
+            else:
+                self.redis_conn = redis.StrictRedis(host=options.redis_host,
+                                                    port=options.redis_port, db=0)
         try:
             connected = True if self.redis_conn.ping() else False
         except redis.exceptions.ConnectionError:
@@ -186,7 +190,7 @@ class RPCServer(WebSocketHandler):
                                'configuration file or on the command line')
             return
 
-        if not self._open_redis_connection():
+        if not self._open_redis_connection(encoded_token):
             self._fail_request('Shirow is not able to connect to Redis')
             return
 
