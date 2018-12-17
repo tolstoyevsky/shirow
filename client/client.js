@@ -136,6 +136,10 @@ class Shirow extends Events {
             }
         };
 
+        this._shirow.onerror = () => {
+            this.trigger('error');
+        };
+
         this._shirow.onmessage = event => this._onmessage(JSON.parse(event.data));
     }
 
