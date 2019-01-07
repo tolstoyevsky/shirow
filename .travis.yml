@@ -4,7 +4,10 @@ python:
   - 3.5
 
 install:
+  - pip install pylint
   - pip install -r requirements.txt
+  - pip install -r django-shirow/requirements.txt
 
 script:
   - env PYTHONPATH="$(pwd)" python3 -m tornado.testing shirow/test/runtests.py
+  - find . -name "*.py"  ! -name "setup.py" ! -name "runtests.py" ! -name "demo.py" | xargs pylint
