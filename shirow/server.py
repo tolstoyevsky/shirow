@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""This module provides an RPC framework the primary goal of which is to
+simplify creating microservices using Tornado.
+"""
+
 import logging
 from functools import wraps
 
@@ -50,7 +54,25 @@ define('redis_port',
        help='specify Redis port', default=6379)
 
 
+def check_number_of_args(method, params):
+    """Checks if the number of actual arguments passed to a remote procedure
+    matches the number of formal parameters of the remote procedure (except
+    self and request).
+    """
+
+    min_args, max_args = method.arguments_range
+    if (max_args - 2) >= len(params) >= (min_args - 2):
+        return True
+
+    return False
+
+
 def remote(func):
+    """Decorator to mark some of the methods of RPC servers as remote. The
+    decorated methods can be considered as a part of the public interface,
+    since they are accessible from the client side.
+    """
+
     @wraps(func)
     @gen.coroutine
     def wrapper(self, *args, **kwargs):
@@ -76,10 +98,11 @@ def remote(func):
 class UndefinedMethod(Exception):
     """Exception raised when attempting to get a method which either does not
     exist or is not public."""
-    pass
 
 
-class RPCServer(WebSocketHandler):
+class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
+    """Base class for RPC servers. """
+
     def __init__(self, application, request, **kwargs):
         WebSocketHandler.__init__(self, application, request, **kwargs)
 
@@ -99,7 +122,7 @@ class RPCServer(WebSocketHandler):
             request.ret_error('the {} function is undefined'.
                               format(method_name))
 
-        if self._check_number_of_args(method, arguments_list):
+        if check_number_of_args(method, arguments_list):
             future = to_asyncio_future(method(request, *arguments_list))
         else:
             request.ret_error('number of arguments mismatch in the {} '
@@ -111,20 +134,10 @@ class RPCServer(WebSocketHandler):
                 request.ret(result)
         except Ret:
             pass
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             message = 'an error occurred while executing the function'
             self.logger.exception(message)
             request.ret_error(message)
-
-    def _check_number_of_args(self, method, params):
-        # Checking if the number of actual arguments passed to a remote
-        # procedure matches the number of formal parameters of the remote
-        # procedure (except self and request).
-        min, max = method.arguments_range
-        if (max - 2) >= len(params) >= (min - 2):
-            return True
-
-        return False
 
     def _decode_token(self, encoded_token):
         decoded = True
@@ -167,7 +180,7 @@ class RPCServer(WebSocketHandler):
             self.redis_conn = redis.StrictRedis(host=options.redis_host,
                                                 port=options.redis_port, db=0)
         try:
-            connected = True if self.redis_conn.ping() else False
+            connected = bool(self.redis_conn.ping())
         except redis.exceptions.ConnectionError:
             connected = False
 
@@ -219,10 +232,10 @@ class RPCServer(WebSocketHandler):
             self._dismiss_request()
 
     def create(self):
-        pass
+        """Invoked when a connection to the RPC server is established. """
 
     def destroy(self):
-        pass
+        """Invoked when a connection to the RPC server is terminated. """
 
     # Implementing the methods inherited from
     # tornado.websocket.WebSocketHandler
@@ -234,7 +247,7 @@ class RPCServer(WebSocketHandler):
         if not isinstance(value, Ret):
             WebSocketHandler.log_exception(self, typ, value, tb)
 
-    def open(self):
+    def open(self, *args, **kwargs):
         self.create()
 
     def on_close(self):
@@ -244,10 +257,10 @@ class RPCServer(WebSocketHandler):
     def on_message(self, message):
         parsed = json_decode(message)
 
-        def cb(response):
+        def callback(response):
             self.write_message(response)
 
-        request = Request(parsed['marker'], cb)
+        request = Request(parsed['marker'], callback)
 
         method_name = parsed['function_name']
         params = parsed['parameters_list']

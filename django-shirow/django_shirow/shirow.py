@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""A bridge between Django and RPC servers based on Shirow. """
+
 from functools import wraps
 
 import jwt
