@@ -12,12 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Utility code intended to simplify initializing the event loop. """
+
 import asyncio
 
 from tornado.platform.asyncio import AsyncIOMainLoop
 
 
 class Singleton(type):
+    """Metaclass which helps to create singletons. """
     instances = {}
 
     def __call__(cls, *args, **kwargs):
@@ -28,12 +31,18 @@ class Singleton(type):
         return cls.instances[cls]
 
 
-class IOLoop(metaclass=Singleton):
+class IOLoop(metaclass=Singleton):  # pylint: disable=too-few-public-methods
+    """A singleton intended to create the event loop based on the AsyncIO Event
+    Loop.
+    """
+
     def __init__(self):
         self._io_loop = None
         AsyncIOMainLoop().install()
 
     def start(self, app, port):
+        """Starts the event loop. """
+
         app.listen(port)
         self._io_loop = asyncio.get_event_loop()
         self._io_loop.run_forever()

@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Miscellaneous utility functions. """
+
 from subprocess import PIPE
 
 from tornado import gen
@@ -24,7 +26,7 @@ def execute_async(command_line, env=None):
 
     process = Subprocess(command_line, env=env, stdout=PIPE, stderr=PIPE)
     ret = yield process.wait_for_exit(raise_error=False)
-    out, err = process.stdout.read(), process.stderr.read()
+    out, err = process.stdout.read(), process.stderr.read()  # pylint: disable=no-member
     process.stdout.close()
     process.stderr.close()
     return ret, out, err

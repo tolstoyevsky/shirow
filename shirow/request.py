@@ -12,16 +12,33 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""This module contains the implementation of the entity called request. When
+an RPC client connects to an RPC server and invokes one of the available remote
+procedures, the request is passed to the remote procedure. The request is
+necessary to allow the remote procedure to "find" its client when returning the
+result.
+"""
+
 from tornado.escape import json_encode
 
 
 class Ret(Exception):
+    """Exception raised when a remote procedure returns a value via
+    `Request.ret`.
+    """
+
     def __init__(self, value=None):
         super(Ret, self).__init__()
         self.value = value
 
 
 class Request:
+    """Base class for requests.
+
+    The instance of the class is passed as the first argument to a remote
+    procedure before invoking it.
+    """
+
     def __init__(self, marker, callback):
         self._callback = callback
         self._marker = marker
@@ -61,6 +78,8 @@ class Request:
         self._callback(self._get_successful_response(value, False))
 
     def ret_error(self, message):
+        """Causes a remote procedure to exit and inform the the client that an
+        error occurred.
+        """
         self._callback(self._get_error_response(message))
         raise Ret()
-
