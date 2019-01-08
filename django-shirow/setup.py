@@ -12,7 +12,7 @@ except ImportError:
 
 
 setup(name='django-shirow',
-      version='0.3',
+      version='0.4',
       description='Django Shirow package',
       long_description=long_description,
       url='https://github.com/tolstoyevsky/shirow',

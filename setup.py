@@ -14,7 +14,7 @@ except ImportError:
 
 
 setup(name='shirow',
-      version='0.3',
+      version='0.4',
       description='Shirow package',
       long_description=long_description,
       url='https://github.com/tolstoyevsky/shirow',
