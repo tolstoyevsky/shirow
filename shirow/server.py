@@ -21,13 +21,10 @@ from functools import wraps
 
 import jwt
 import jwt.exceptions
-import tornado
 from jwt.exceptions import DecodeError, ExpiredSignatureError
-from tornado import gen
 from tornado.escape import json_decode
 from tornado.ioloop import IOLoop
 from tornado.options import define, options
-from tornado.platform.asyncio import to_asyncio_future
 from tornado.websocket import WebSocketHandler
 
 from shirow.exceptions import CouldNotDecodeToken, UndefinedMethod
@@ -59,10 +56,9 @@ def remote(func):
     """
 
     @wraps(func)
-    @gen.coroutine
-    def wrapper(self, *args, **kwargs):
+    async def wrapper(self, *args, **kwargs):
         args += tuple(kwargs.values())
-        return func(self, *args)
+        return await func(self, *args)
 
     try:
         defaults_number = len(func.__defaults__)
@@ -93,26 +89,24 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
     #
     # Internal methods.
     #
-    @gen.coroutine
-    def _call_remote_procedure(self, request, method_name, arguments_list):
+
+    async def _call_remote_procedure(self, request, method_name, arguments_list):
         try:
             method = self._get_method(method_name)
         except UndefinedMethod:
             request.ret_error(f'the {method_name} function is undefined')
 
-        if check_number_of_args(method, arguments_list):
-            future = to_asyncio_future(method(request, *arguments_list))
-        else:
+        if not check_number_of_args(method, arguments_list):
             request.ret_error(f'number of arguments mismatch in the {method_name} function call')
 
         try:
-            result = yield from future
+            result = await method(request, *arguments_list)
             if result is not None:  # if the return statement was used
                 request.ret(result)
         except Ret:
             pass
         except Exception:  # pylint: disable=broad-except
-            message = 'an error occurred while executing the function'
+            message = f'an error occurred while executing the function {method_name}'
             self.logger.exception(message)
             request.ret_error(message)
 
@@ -143,8 +137,7 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
 
         raise UndefinedMethod
 
-    @tornado.web.asynchronous
-    def get(self, *args, **kwargs):
+    async def get(self, *args, **kwargs):
         try:
             encoded_token = args[0]
         except IndexError:  # The request doesn't contain a token.
@@ -175,7 +168,7 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
             # The only parameter we needed has already been processed. Now we
             # have to get rid of it.
             args = ()
-            WebSocketHandler.get(self, *args, **kwargs)
+            await WebSocketHandler.get(self, *args, **kwargs)
         else:
             self._dismiss_request()
 
@@ -201,8 +194,7 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
     def on_close(self):
         self.destroy()
 
-    @gen.coroutine
-    def on_message(self, message):
+    async def on_message(self, message):
         parsed = json_decode(message)
 
         def callback(response):
@@ -214,6 +206,6 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
         params = parsed['parameters_list']
 
         try:
-            yield self._call_remote_procedure(request, method_name, params)
+            await self._call_remote_procedure(request, method_name, params)
         except Ret:
             pass

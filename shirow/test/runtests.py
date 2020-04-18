@@ -59,23 +59,23 @@ class MockRPCServer(RPCServer):
         self.close_future.set_result((self.close_code, self.close_reason))
 
     @remote
-    def add(self, request, a, b):
+    async def add(self, request, a, b):
         return a + b
 
     @remote
-    def div_by_zero(self, request):
+    async def div_by_zero(self, request):
         1 / 0
 
     @remote
-    def echo_via_ret_method(self, request, message):
+    async def echo_via_ret_method(self, request, message):
         request.ret(message)
 
     @remote
-    def echo_via_return_statement(self, request, message):
+    async def echo_via_return_statement(self, request, message):
         return message
 
     @remote
-    def read_from_fd(self, request, fd):
+    async def read_from_fd(self, request, fd):
         def handler(*args, **kwargs):
             res = os.read(fd, 65536)
             if res == b'qux\r\n':
@@ -86,13 +86,13 @@ class MockRPCServer(RPCServer):
         self.io_loop.add_handler(fd, handler, self.io_loop.READ)
 
     @remote
-    def return_more_than_one_value(self, request):
+    async def return_more_than_one_value(self, request):
         request.ret_and_continue('spam')
         request.ret_and_continue('ham')
         request.ret_and_continue('eggs')
 
     @remote
-    def say_hello(self, request, name='Shirow'):
+    async def say_hello(self, request, name='Shirow'):
         return f'Hello {name}!'
 
 
@@ -246,7 +246,7 @@ class RPCServerTest(WebSocketBaseTestCase):
         ws.write_message(payload)
         response = yield ws.read_message()
         self.assertEqual(json_decode(response), {
-            'error': 'an error occurred while executing the function',
+            'error': 'an error occurred while executing the function div_by_zero',
             'marker': 1
         })
         yield self.close(ws)
