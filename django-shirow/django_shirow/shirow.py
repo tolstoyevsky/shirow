@@ -38,7 +38,7 @@ def create_token_if_needed(func):
     def wrapper(request, *args, **kwargs):
         redis_conn = redis.StrictRedis(host=redis_host, port=redis_port, db=0)
         user_id = request.user.id
-        key = 'user:{}:token'.format(user_id)
+        key = f'user:{user_id}:token'
         encoded_token_from_redis = redis_conn.get(key)
         if encoded_token_from_redis:
             encoded_token = encoded_token_from_redis

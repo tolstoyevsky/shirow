@@ -38,8 +38,8 @@ MOCK_USER_ID = -1
 TOKEN_PATTERN = r'([_\-\w\.]+)'
 
 define('allow_mock_token',
-       help="allow using '{}' instead of real token (for testing "
-            "purposes only)".format(MOCK_TOKEN), default=False, type=bool)
+       help=f"allow using '{MOCK_TOKEN}' instead of real token (for testing "
+            f"purposes only)", default=False, type=bool)
 define('config_file',
        help='load parameters from the specified configuration '
             'file', default='shirow.conf')
@@ -107,14 +107,12 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
         try:
             method = self._get_method(method_name)
         except UndefinedMethod:
-            request.ret_error('the {} function is undefined'.
-                              format(method_name))
+            request.ret_error(f'the {method_name} function is undefined')
 
         if check_number_of_args(method, arguments_list):
             future = to_asyncio_future(method(request, *arguments_list))
         else:
-            request.ret_error('number of arguments mismatch in the {} '
-                              'function call'.format(method_name))
+            request.ret_error(f'number of arguments mismatch in the {method_name} function call')
 
         try:
             result = yield from future
@@ -154,7 +152,7 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
         if user_id is None:
             user_id = self.user_id
 
-        return 'user:{}:token'.format(user_id)
+        return f'user:{user_id}:token'
 
     def _get_method(self, method_name):
         method = getattr(self, method_name, None)
@@ -205,8 +203,8 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
 
         decoded_token = self._decode_token(encoded_token)
         if not decoded_token:
-            self._fail_request('An error occurred while decoding the '
-                               'following token: {}'.format(encoded_token))
+            self._fail_request(f'An error occurred while decoding the following token: '
+                               f'{encoded_token}')
             return
 
         key = self._get_token_key()
