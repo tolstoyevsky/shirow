@@ -33,7 +33,7 @@ from shirow.request import Ret, Request
 from shirow.util import check_number_of_args
 
 MOCK_TOKEN = 'mock_token'
-MOCK_USER_ID = -1
+MOCK_USER_ID = 1
 TOKEN_PATTERN = r'([_\-\w\.]+)'
 
 define('allow_mock_token',
