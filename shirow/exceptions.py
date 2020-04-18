@@ -15,6 +15,10 @@
 """This module contains the Shirow exceptions. """
 
 
+class CouldNotDecodeToken(Exception):
+    """Exception raised when an attempt to decode a token was unsuccessful. """
+
+
 class UndefinedMethod(Exception):
     """Exception raised when attempting to get a method which either does not exist or is not
     public.

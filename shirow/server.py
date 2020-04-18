@@ -22,6 +22,7 @@ from functools import wraps
 import jwt
 import jwt.exceptions
 import tornado
+from jwt.exceptions import DecodeError
 from tornado import gen
 from tornado.escape import json_decode
 from tornado.ioloop import IOLoop
@@ -29,7 +30,7 @@ from tornado.options import define, options
 from tornado.platform.asyncio import to_asyncio_future
 from tornado.websocket import WebSocketHandler
 
-from shirow.exceptions import UndefinedMethod
+from shirow.exceptions import CouldNotDecodeToken, UndefinedMethod
 from shirow.request import Ret, Request
 from shirow.util import check_number_of_args
 
@@ -116,16 +117,13 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
             request.ret_error(message)
 
     def _decode_token(self, encoded_token):
-        decoded = True
         try:
             token = jwt.decode(encoded_token, options.token_key,
                                algorithms=[options.token_algorithm])
-        except jwt.exceptions.DecodeError:
-            token = {}
-            decoded = False
+        except DecodeError:
+            raise CouldNotDecodeToken
 
-        self.user_id = token.get('user_id', None)
-        return decoded
+        self.user_id = token['user_id']
 
     def _dismiss_request(self):
         self.logger.warning('Authentication request was dismissed')
@@ -161,8 +159,9 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
         if options.allow_mock_token and encoded_token == MOCK_TOKEN:
             self.user_id = MOCK_USER_ID
         else:
-            decoded_token = self._decode_token(encoded_token)
-            if not decoded_token:
+            try:
+                self._decode_token(encoded_token)
+            except CouldNotDecodeToken:
                 self._dismiss_request()
                 return
 
