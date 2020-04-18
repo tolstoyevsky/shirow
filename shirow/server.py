@@ -21,7 +21,6 @@ from functools import wraps
 
 import jwt
 import jwt.exceptions
-import redis
 import tornado
 from tornado import gen
 from tornado.escape import json_decode
@@ -49,10 +48,6 @@ define('token_algorithm',
        help='specify the algorithm used to sign the token', default='HS256')
 define('token_key',
        help='encrypt the token using the specified secret key', default=None)
-define('redis_host',
-       help='specify Redis host', default='localhost')
-define('redis_port',
-       help='specify Redis port', default=6379)
 
 
 def remote(func):
@@ -96,7 +91,6 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
 
         self.io_loop = IOLoop.current()
         self.logger = logging.getLogger('tornado.application')
-        self.redis_conn = None
         self.user_id = None
 
     #
@@ -148,29 +142,12 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
         self.set_status(500)  # Internal Server Error
         self.finish()
 
-    def _get_token_key(self, user_id=None):
-        if user_id is None:
-            user_id = self.user_id
-
-        return f'user:{user_id}:token'
-
     def _get_method(self, method_name):
         method = getattr(self, method_name, None)
         if method_name in dir(self) and hasattr(method, 'remote'):
             return method
 
         raise UndefinedMethod
-
-    def _open_redis_connection(self):
-        if not self.redis_conn:
-            self.redis_conn = redis.StrictRedis(host=options.redis_host,
-                                                port=options.redis_port, db=0)
-        try:
-            connected = bool(self.redis_conn.ping())
-        except redis.exceptions.ConnectionError:
-            connected = False
-
-        return connected
 
     @tornado.web.asynchronous
     def get(self, *args, **kwargs):
@@ -185,30 +162,14 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
                                'configuration file or on the command line')
             return
 
-        if not self._open_redis_connection():
-            self._fail_request('Shirow is not able to connect to Redis')
-            return
-
-        # Prepare mock token if needed
         if options.allow_mock_token and encoded_token == MOCK_TOKEN:
-            payload = {'user_id': MOCK_USER_ID, 'ip': '127.0.0.1'}
-            encoded_token = \
-                jwt.encode(payload, options.token_key,
-                           algorithm=options.token_algorithm).decode('utf8')
-
-            key = self._get_token_key(MOCK_USER_ID)
-            token_ttl = 15  # seconds
-            self.redis_conn.setex(key, 60 * token_ttl, encoded_token)
             self.user_id = MOCK_USER_ID
+        else:
+            decoded_token = self._decode_token(encoded_token)
+            if not decoded_token:
+                self._dismiss_request()
 
-        decoded_token = self._decode_token(encoded_token)
-        if not decoded_token:
-            self._fail_request(f'An error occurred while decoding the following token: '
-                               f'{encoded_token}')
-            return
-
-        key = self._get_token_key()
-        if self.redis_conn.get(key) == encoded_token.encode('utf8'):
+        if self.user_id:
             # The WebSocket connection request must not contain any parameters.
             # The only parameter we needed has already been processed. Now we
             # have to get rid of it.
