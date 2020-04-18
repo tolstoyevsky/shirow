@@ -92,17 +92,6 @@ class MockRPCServer(RPCServer):
         request.ret_and_continue('eggs')
 
     @remote
-    def run_echo_asynchronously(self, request):
-        ret, out, err = yield util.execute_async(['echo', 'spam'])
-        return ret, out.decode('utf8'), err.decode('utf8')
-
-    @remote
-    def run_broken_program_asynchronously(self, request):
-        ret, out, err = yield util.execute_async([sys.executable,
-                                                  '-c', '1 / 0'])
-        return ret, out.decode('utf8'), err.decode('utf8')
-
-    @remote
     def say_hello(self, request, name='Shirow'):
         return f'Hello {name}!'
 
@@ -349,41 +338,6 @@ class RPCServerTest(WebSocketBaseTestCase):
             })
 
             yield self.close(ws)
-
-    @gen_test
-    def test_running_echo_asynchronously(self):
-        ws = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
-        payload = self.prepare_payload('run_echo_asynchronously', [], 1)
-        ws.write_message(payload)
-        response = yield ws.read_message()
-        ret_code, stdout, stderr = 0, 'spam\n', ''
-        self.assertEqual(json_decode(response), {
-            'result': [ret_code, stdout, stderr],
-            'marker': 1,
-            'eod': 1,
-        })
-
-        yield self.close(ws)
-
-    @gen_test
-    def test_running_broken_program_asynchronously(self):
-        ws = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
-        payload = self.prepare_payload('run_broken_program_asynchronously',
-                                       [], 1)
-        ws.write_message(payload)
-        response = yield ws.read_message()
-        ret_code = 1
-        stdout = ''
-        stderr = ('Traceback (most recent call last):\n'
-                  '  File "<string>", line 1, in <module>\n'
-                  'ZeroDivisionError: division by zero\n')
-        self.assertEqual(json_decode(response), {
-            'result': [ret_code, stdout, stderr],
-            'marker': 1,
-            'eod': 1,
-        })
-
-        yield self.close(ws)
 
 
 def main():
