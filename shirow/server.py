@@ -168,6 +168,7 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
             decoded_token = self._decode_token(encoded_token)
             if not decoded_token:
                 self._dismiss_request()
+                return
 
         if self.user_id:
             # The WebSocket connection request must not contain any parameters.
