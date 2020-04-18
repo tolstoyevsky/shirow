@@ -14,11 +14,6 @@
 
 """Miscellaneous utility functions. """
 
-from subprocess import PIPE
-
-from tornado import gen
-from tornado.process import Subprocess
-
 
 def check_number_of_args(method, params):
     """Checks if the number of actual arguments passed to a remote procedure
@@ -31,15 +26,3 @@ def check_number_of_args(method, params):
         return True
 
     return False
-
-
-@gen.coroutine
-def execute_async(command_line, env=None):
-    """Executes the specified command line asynchronously. """
-
-    process = Subprocess(command_line, env=env, stdout=PIPE, stderr=PIPE)
-    ret = yield process.wait_for_exit(raise_error=False)
-    out, err = process.stdout.read(), process.stderr.read()  # pylint: disable=no-member
-    process.stdout.close()
-    process.stderr.close()
-    return ret, out, err
