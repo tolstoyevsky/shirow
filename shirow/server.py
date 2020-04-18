@@ -29,6 +29,7 @@ from tornado.options import define, options
 from tornado.platform.asyncio import to_asyncio_future
 from tornado.websocket import WebSocketHandler
 
+from shirow.exceptions import UndefinedMethod
 from shirow.request import Ret, Request
 from shirow.util import check_number_of_args
 
@@ -76,11 +77,6 @@ def remote(func):
     wrapper.remote = True
 
     return wrapper
-
-
-class UndefinedMethod(Exception):
-    """Exception raised when attempting to get a method which either does not
-    exist or is not public."""
 
 
 class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
