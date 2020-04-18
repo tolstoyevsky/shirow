@@ -20,6 +20,19 @@ from tornado import gen
 from tornado.process import Subprocess
 
 
+def check_number_of_args(method, params):
+    """Checks if the number of actual arguments passed to a remote procedure
+    matches the number of formal parameters of the remote procedure (except
+    self and request).
+    """
+
+    min_args, max_args = method.arguments_range
+    if (max_args - 2) >= len(params) >= (min_args - 2):
+        return True
+
+    return False
+
+
 @gen.coroutine
 def execute_async(command_line, env=None):
     """Executes the specified command line asynchronously. """

@@ -31,6 +31,7 @@ from tornado.platform.asyncio import to_asyncio_future
 from tornado.websocket import WebSocketHandler
 
 from shirow.request import Ret, Request
+from shirow.util import check_number_of_args
 
 MOCK_TOKEN = 'mock_token'
 MOCK_USER_ID = -1
@@ -52,19 +53,6 @@ define('redis_host',
        help='specify Redis host', default='localhost')
 define('redis_port',
        help='specify Redis port', default=6379)
-
-
-def check_number_of_args(method, params):
-    """Checks if the number of actual arguments passed to a remote procedure
-    matches the number of formal parameters of the remote procedure (except
-    self and request).
-    """
-
-    min_args, max_args = method.arguments_range
-    if (max_args - 2) >= len(params) >= (min_args - 2):
-        return True
-
-    return False
 
 
 def remote(func):
