@@ -17,7 +17,6 @@ import os
 import pty
 import sys
 
-import fakeredis
 import jwt
 from tornado import gen
 from tornado.concurrent import Future
@@ -36,8 +35,6 @@ TOKEN_ALGORITHM_ENCODING = 'HS256'
 
 TOKEN_KEY = 'secret'
 
-TOKEN_TTL = 15
-
 USER_ID = 1
 
 ENCODED_TOKEN = jwt.encode({'user_id': USER_ID, 'ip': '127.0.0.1'}, TOKEN_KEY,
@@ -45,13 +42,6 @@ ENCODED_TOKEN = jwt.encode({'user_id': USER_ID, 'ip': '127.0.0.1'}, TOKEN_KEY,
 
 
 class MockRPCServer(RPCServer):
-    def __init__(self, application, request, **kwargs):
-        super(MockRPCServer, self).__init__(application, request, **kwargs)
-
-        self.redis_conn = fakeredis.FakeStrictRedis()
-        key = f'user:{USER_ID}:token'
-        self.redis_conn.setex(key, 60 * TOKEN_TTL, ENCODED_TOKEN)
-
     def initialize(self, close_future, compression_options=None):
         self.close_future = close_future
         self.compression_options = compression_options
@@ -160,14 +150,7 @@ class RPCServerTest(WebSocketBaseTestCase):
 
     def test_passing_non_existent_token(self):
         response = self.fetch('/rpc/token/some.non.existent.token')
-        self.assertEqual(response.code, 500)  # decode error
-
-        payload = {'user_id': 2, 'ip': '127.0.0.1'}
-        non_existent_token = jwt.encode(payload, TOKEN_KEY,
-                                        algorithm=TOKEN_ALGORITHM_ENCODING)
-        response = self.fetch('/rpc/token/' +
-                              non_existent_token.decode('utf8'))
-        self.assertEqual(response.code, 401)  # the token isn't in Redis
+        self.assertEqual(response.code, 401)
 
     def test_using_mock_token_key(self):
         options.allow_mock_token = True
@@ -186,7 +169,7 @@ class RPCServerTest(WebSocketBaseTestCase):
     def test_using_wrong_token_key(self):
         options.token_key = 'wrong_' + TOKEN_KEY
         response = self.fetch(f'/rpc/token/{ENCODED_TOKEN}')
-        self.assertEqual(response.code, 500)  # decode error
+        self.assertEqual(response.code, 401)  # decode error
 
     @gen_test
     def test_using_ret_method_to_return_value(self):

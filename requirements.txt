@@ -1,5 +1,3 @@
-fakeredis
 pyjwt
 pypandoc # only for converting README.md
-redis
 tornado==4.5.3
