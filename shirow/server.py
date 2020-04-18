@@ -22,7 +22,7 @@ from functools import wraps
 import jwt
 import jwt.exceptions
 import tornado
-from jwt.exceptions import DecodeError
+from jwt.exceptions import DecodeError, ExpiredSignatureError
 from tornado import gen
 from tornado.escape import json_decode
 from tornado.ioloop import IOLoop
@@ -162,6 +162,11 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
             try:
                 self._decode_token(encoded_token)
             except CouldNotDecodeToken:
+                self.logger.info('Could not decode the token %s', encoded_token)
+                self._dismiss_request()
+                return
+            except ExpiredSignatureError:
+                self.logger.info('The token %s is expired', encoded_token)
                 self._dismiss_request()
                 return
 

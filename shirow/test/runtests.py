@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import logging
 import os
 import pty
@@ -39,6 +40,11 @@ USER_ID = 1
 
 ENCODED_TOKEN = jwt.encode({'user_id': USER_ID, 'ip': '127.0.0.1'}, TOKEN_KEY,
                            algorithm=TOKEN_ALGORITHM_ENCODING).decode('utf8')
+
+EXPIRED_ENCODED_TOKEN = jwt.encode(
+    {'exp': datetime.datetime(1983, 2, 25).timestamp(), 'user_id': USER_ID, 'ip': '127.0.0.1'},
+    TOKEN_KEY, algorithm=TOKEN_ALGORITHM_ENCODING
+).decode('utf8')
 
 
 class MockRPCServer(RPCServer):
@@ -146,6 +152,10 @@ class RPCServerTest(WebSocketBaseTestCase):
 
     def test_tokenless_request(self):
         response = self.fetch('/rpc')
+        self.assertEqual(response.code, 401)
+
+    def test_passing_expired_token(self):
+        response = self.fetch(f'/rpc/token/{EXPIRED_ENCODED_TOKEN}')
         self.assertEqual(response.code, 401)
 
     def test_passing_non_existent_token(self):
