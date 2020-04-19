@@ -10,3 +10,7 @@ install:
 script:
   - env PYTHONPATH="$(pwd)" python3 -m tornado.testing shirow/test/runtests.py
   - find . -name "*.py" ! -name "runtests.py" ! -name "demo.py" | xargs pylint
+  # Lint the test module in a different way -- ignore
+  # missing-function-docstring since each test case name is self-descriptive,
+  # so there is no need to repeat them in docstrings. 
+  - pylint --disable=missing-function-docstring shirow/test/runtests.py
