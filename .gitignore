@@ -1,10 +1,8 @@
 .idea
 __pycache__
 build
-demo/bundles
 dist
 node_modules
-static/bundles
 *.egg-info
 
 npm-debug.log
