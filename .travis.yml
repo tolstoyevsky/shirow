@@ -9,4 +9,4 @@ install:
 
 script:
   - env PYTHONPATH="$(pwd)" python3 -m tornado.testing shirow/test/runtests.py
-  - find . -name "*.py"  ! -name "setup.py" ! -name "runtests.py" ! -name "demo.py" | xargs pylint
+  - find . -name "*.py" ! -name "runtests.py" ! -name "demo.py" | xargs pylint
