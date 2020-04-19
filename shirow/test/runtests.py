@@ -113,7 +113,8 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):  # pylint: disable=abstract-meth
     """A test case that starts up a WebSocket server. """
 
     def setUp(self):
-        super(WebSocketBaseTestCase, self).setUp()
+        super().setUp()
+
         IOLoop.configure('tornado.platform.asyncio.AsyncIOLoop')
         self.io_loop = IOLoop.current()
 
