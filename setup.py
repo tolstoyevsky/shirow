@@ -13,6 +13,9 @@ except ImportError:
     LONG_DESCRIPTION = ('Shirow is an implementation of a distinctive concept of a remote '
                         'procedure call.')
 
+with open('requirements.txt') as outfile:
+    REQUIREMENTS_LIST = outfile.read().splitlines()
+
 
 setup(name='shirow',
       version='0.4',
@@ -24,8 +27,8 @@ setup(name='shirow',
       maintainer_email='Evgeny Golyshev <eugulixes@gmail.com>',
       license='http://www.apache.org/licenses/LICENSE-2.0',
       packages=['shirow'],
-      install_requires=[
-          'tornado==4.5.3',
-          'redis',
-          'pyjwt'
-      ])
+      include_package_data=True,
+      data_files=[
+          ('', ['requirements.txt']),
+      ],
+      install_requires=REQUIREMENTS_LIST)
