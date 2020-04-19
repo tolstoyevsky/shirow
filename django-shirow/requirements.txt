@@ -1,4 +1,0 @@
-django==1.11.23
-pyjwt
-pypandoc # only for converting README.md
-redis
