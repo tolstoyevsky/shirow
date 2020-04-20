@@ -2,6 +2,7 @@
  * Copyright 2016 Maxim Karpinskiy <karpinski20@gmail.com>
  * Copyright 2016 Denis Mosolov <denismosolov@gmail.com>
  * Copyright 2016 Evgeny Golyshev <eugulixes@gmail.com>
+ * Copyright 2020 Denis Gavrilyuk <karpa4o4@gmail.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
