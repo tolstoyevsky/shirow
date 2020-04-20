@@ -20,12 +20,12 @@
 const RETRIES_NUMBER = 5;
 
 class Events {
-    constructor() {
+    constructor () {
         this._callbacks = {};
     }
 
-    on(ev, cb) {
-        let callbacks = this._callbacks;
+    on (ev, cb) {
+        const callbacks = this._callbacks;
 
         if (!callbacks[ev]) {
             callbacks[ev] = [];
@@ -34,9 +34,9 @@ class Events {
         callbacks[ev].push(cb);
     }
 
-    trigger(ev) {
-        var args = Array.from(arguments),
-            callbacks = this._callbacks || (this._callbacks = {});
+    trigger (ev) {
+        const args = Array.from(arguments);
+        const callbacks = this._callbacks || (this._callbacks = {});
 
         if (typeof callbacks[ev] === 'undefined') {
             return this;
@@ -49,11 +49,11 @@ class Events {
 }
 
 class Shirow extends Events {
-    constructor(ws_host) {
+    constructor (wsHost) {
         super();
 
-        if (typeof ws_host !== 'string' || !ws_host.startsWith('ws')) {
-            throw new Error('The ws_host parameter must be started with the ws:// or wss:// URI scheme.');
+        if (typeof wsHost !== 'string' || !wsHost.startsWith('ws')) {
+            throw new Error('The wsHost parameter must be started with the ws:// or wss:// URI scheme.');
         }
 
         this._attempts = 0;
@@ -64,7 +64,7 @@ class Shirow extends Events {
         this._errors = {};
         this._queue = [];
         this._timeouts = {};
-        this._ws_host = ws_host;
+        this._ws_host = wsHost;
 
         this._connect();
 
@@ -77,34 +77,34 @@ class Shirow extends Events {
 
     /* Internal methods. */
 
-    _log(msg, tracelog) {
+    _log (msg, tracelog) {
         console[tracelog ? 'trace' : 'log'](`Shirow: ${msg}`);
     }
 
-    _register_callback(callback, marker) {
+    _registerCallback (callback, marker) {
         this._callbacks[marker] = this._callbacks[marker] || [];
         this._callbacks[marker].push(callback);
     }
 
-    _register_timeout(timeoutId, marker) {
+    _registerTimeout (timeoutId, marker) {
         this._timeouts[marker] = timeoutId;
     }
 
-    _register_error(fn, marker) {
+    _registerError (fn, marker) {
         this._errors[marker] = fn;
     }
 
     /**
     * will be executed either on message event or after timeout
     */
-    _unregister(marker) {
+    _unregister (marker) {
         delete this._callbacks[marker];
         delete this._errors[marker];
         clearTimeout(this._timeouts[marker]);
         delete this._timeouts[marker];
     }
 
-    _connect() {
+    _connect () {
         this._shirow = new WebSocket(this._ws_host);
 
         this._shirow.onopen = () => {
@@ -143,12 +143,12 @@ class Shirow extends Events {
         this._shirow.onmessage = event => this._onmessage(JSON.parse(event.data));
     }
 
-    _onmessage(json = {}) {
-        let marker = json.marker;
+    _onmessage (json = {}) {
+        const marker = json.marker;
 
-        if (typeof json.result != 'undefined') {
+        if (typeof json.result !== 'undefined') {
             let result = json.result;
-            let cbs = this._callbacks[marker];
+            const cbs = this._callbacks[marker];
 
             if (cbs) {
                 /* There can be more than one handler function. */
@@ -169,9 +169,9 @@ class Shirow extends Events {
         }
     }
 
-    _reconnect() {
+    _reconnect () {
         if (this._attempts < RETRIES_NUMBER) {
-            let delay = this._attempts * this._attempts;
+            const delay = this._attempts * this._attempts;
 
             this._log(
                 `connection failed, retrying in ${delay} seconds.`,
@@ -181,7 +181,6 @@ class Shirow extends Events {
             setTimeout(() => this._connect(), delay * 1000);
 
             this._attempts += 1;
-
         } else {
             this._log(
                 `connection failed after ${RETRIES_NUMBER} retries.`,
@@ -190,15 +189,15 @@ class Shirow extends Events {
         }
     }
 
-    _send(data_str) {
+    _send (dataStr) {
         if (this._is_opened) {
-            this._shirow.send(data_str);
+            this._shirow.send(dataStr);
         } else {
-            this._queue.push(data_str);
+            this._queue.push(dataStr);
         }
     }
 
-    _diagnose(success, failure) {
+    _diagnose (success, failure) {
         if (this._is_diagnosed) {
             /*
              * It means that the diagnosing has been made before and the
@@ -211,9 +210,9 @@ class Shirow extends Events {
          * Note that if the wss:// URI scheme is used, we will get https after
          * replacement.
          */
-        let http_host = this._ws_host.replace(/^ws/, 'http');
-        let xhr = new XMLHttpRequest();
-        xhr.open('GET', http_host);
+        const httpHost = this._ws_host.replace(/^ws/, 'http');
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', httpHost);
 
         success = success || function () {};
         failure = failure || function () {};
@@ -232,8 +231,8 @@ class Shirow extends Events {
         xhr.send();
     }
 
-    _emit(procedure_name, force=false, ...parameters_list) {
-        let that = this;
+    _emit (procedureName, force = false, ...parametersList) {
+        const that = this;
         /*
          * The Shirow client and server use so called markers to map a remote
          * procedure call with its return value. To call a remote procedure,
@@ -245,26 +244,26 @@ class Shirow extends Events {
          * number is used as a marker.
          */
         let data = {
-            'function_name': procedure_name,
-            'parameters_list': parameters_list
+            function_name: procedureName,
+            parameters_list: parametersList
         };
-        let request_number = this._call_number;
-        let cache_key = JSON.stringify(data);
+        const requestNumber = this._call_number;
+        const cacheKey = JSON.stringify(data);
 
-        data.marker = request_number;
+        data.marker = requestNumber;
         data = JSON.stringify(data);
 
         // when force is set to true we don't cache the result
         if (force) {
             this._send(data);
         } else {
-            if (!this._cached_res[cache_key]) {
+            if (!this._cached_res[cacheKey]) {
                 this._send(data);
             } else {
                 setTimeout(() => {
                     this._onmessage({
-                        result: this._cached_res[cache_key],
-                        marker: request_number,
+                        result: this._cached_res[cacheKey],
+                        marker: requestNumber,
                         // all cached responses must be end of data
                         eod: 1
                     });
@@ -276,34 +275,34 @@ class Shirow extends Events {
 
         return {
             then: function (fn) {
-                let callback = function (res) {
+                const callback = function (res) {
                     if (!force) {
-                        that._cached_res[cache_key] = res;
+                        that._cached_res[cacheKey] = res;
                     }
 
                     return fn(res);
                 };
-                that._register_callback(callback, request_number);
+                that._registerCallback(callback, requestNumber);
                 return this;
             },
             timeout: function (time, callback) {
-                let timeoutId = setTimeout(() => {
-                    that._unregister(request_number);
+                const timeoutId = setTimeout(() => {
+                    that._unregister(requestNumber);
                     return callback();
                 }, time);
-                that._register_timeout(timeoutId, request_number);
+                that._registerTimeout(timeoutId, requestNumber);
                 return this;
             },
             catch: function (fn) {
-                that._register_error(fn, request_number);
+                that._registerError(fn, requestNumber);
                 return this;
-            },
+            }
         };
     }
 
     /* User visible methods. */
 
-    disconnect() {
+    disconnect () {
         if (!this._shirow) {
             return;
         }
@@ -312,12 +311,12 @@ class Shirow extends Events {
         this._shirow.close();
     }
 
-    emit(procedure_name, ...parameters_list) {
-        return this._emit(procedure_name, false, ...parameters_list);
+    emit (procedureName, ...parametersList) {
+        return this._emit(procedureName, false, ...parametersList);
     }
 
-    emitForce(procedure_name, ...parameters_list) {
-        return this._emit(procedure_name, true, ...parameters_list);
+    emitForce (procedureName, ...parametersList) {
+        return this._emit(procedureName, true, ...parametersList);
     }
 }
 
