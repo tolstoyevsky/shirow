@@ -9,7 +9,8 @@ try:
         LONG_DESCRIPTION = re.sub('</?p[^>]*>', '', infile.read())
         LONG_DESCRIPTION = re.sub('<img[^>]*>', '', LONG_DESCRIPTION)
         LONG_DESCRIPTION = pypandoc.convert_text(LONG_DESCRIPTION, 'rst', format='md')
-except ImportError:
+except (ImportError, OSError):
+    # OSError is raised when pandoc is not installed.
     LONG_DESCRIPTION = ('Shirow is an implementation of a distinctive concept of a remote '
                         'procedure call.')
 
