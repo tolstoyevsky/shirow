@@ -18,10 +18,10 @@ import datetime
 import logging
 import os
 import pty
+from asyncio import Future
 
 import jwt
 from tornado import gen
-from tornado.concurrent import Future
 from tornado.escape import json_decode, json_encode
 from tornado.ioloop import IOLoop
 from tornado.options import options
