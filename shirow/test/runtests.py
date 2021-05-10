@@ -15,7 +15,6 @@
 """This module contains the Shirow tests. """
 
 import datetime
-import logging
 import os
 import pty
 from asyncio import Future
@@ -349,11 +348,6 @@ class RPCServerTest(WebSocketBaseTestCase):
 
 def main():
     """The main entry point. """
-
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    handler = logging.FileHandler('shirow_test.log')
-    logger.addHandler(handler)
 
     unittest.main()
 
