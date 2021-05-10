@@ -118,21 +118,19 @@ class WebSocketBaseTestCase(AsyncHTTPTestCase):  # pylint: disable=abstract-meth
         IOLoop.configure('tornado.platform.asyncio.AsyncIOLoop')
         self.io_loop = IOLoop.current()
 
-    @gen.coroutine
-    def ws_connect(self, path, compression_options=None):
-        ws_conn = yield websocket_connect(f'ws://127.0.0.1:{self.get_http_port()}{path}',
+    async def ws_connect(self, path, compression_options=None):
+        ws_conn = await websocket_connect(f'ws://127.0.0.1:{self.get_http_port()}{path}',
                                           compression_options=compression_options)
         return ws_conn
 
-    @gen.coroutine
-    def close(self, ws_conn):
+    async def close(self, ws_conn):
         """Close a websocket connection and wait for the server side.
 
         If we don't wait here, there are sometimes leak warnings in the
         tests.
         """
         ws_conn.close()
-        yield self.close_future  # pylint: disable=no-member
+        await self.close_future  # pylint: disable=no-member
 
 
 class RPCServerTest(WebSocketBaseTestCase):
