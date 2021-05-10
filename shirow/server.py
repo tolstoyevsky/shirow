@@ -175,7 +175,7 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
     def create(self):
         """Invoked when a connection to the RPC server is established. """
 
-    def destroy(self):
+    async def destroy(self):
         """Invoked when a connection to the RPC server is terminated. """
 
     # Implementing the methods inherited from
@@ -192,7 +192,7 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
         self.create()
 
     def on_close(self):
-        self.destroy()
+        self.io_loop.add_callback(self.destroy)
 
     async def on_message(self, message):
         parsed = json_decode(message)
