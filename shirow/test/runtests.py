@@ -179,50 +179,50 @@ class RPCServerTest(WebSocketBaseTestCase):
         self.assertEqual(response.code, 401)  # decode error
 
     @gen_test
-    def test_using_ret_method_to_return_value(self):
-        ws_conn = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
+    async def test_using_ret_method_to_return_value(self):
+        ws_conn = await self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
         payload = prepare_payload('echo_via_ret_method', ['Hello!'], 1)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello!',
             'marker': 1,
             'eod': 1,
         })
-        yield self.close(ws_conn)
+        await self.close(ws_conn)
 
     @gen_test
-    def test_using_return_statement_to_return_value(self):
-        ws_conn = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
+    async def test_using_return_statement_to_return_value(self):
+        ws_conn = await self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
         payload = prepare_payload('echo_via_return_statement', ['Hello!'], 1)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello!',
             'marker': 1,
             'eod': 1,
         })
-        yield self.close(ws_conn)
+        await self.close(ws_conn)
 
     @gen_test
-    def test_calling_non_existent_function(self):
-        ws_conn = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
+    async def test_calling_non_existent_function(self):
+        ws_conn = await self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
         payload = prepare_payload('non_existent_function', [], 1)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'the non_existent_function function is undefined',
             'marker': 1
         })
-        yield self.close(ws_conn)
+        await self.close(ws_conn)
 
     @gen_test
-    def test_mismatching_parameters(self):
-        ws_conn = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
+    async def test_mismatching_parameters(self):
+        ws_conn = await self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
         # less than is required
         payload = prepare_payload('add', [1], 1)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'number of arguments mismatch in the add function call',
             'marker': 1
@@ -230,7 +230,7 @@ class RPCServerTest(WebSocketBaseTestCase):
         # more than is required
         payload = prepare_payload('add', [1, 3, 5], 2)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'number of arguments mismatch in the add function call',
             'marker': 2
@@ -238,32 +238,32 @@ class RPCServerTest(WebSocketBaseTestCase):
 
         payload = prepare_payload('add', [1, 3], 3)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'result': 4,
             'marker': 3,
             'eod': 1,
         })
-        yield self.close(ws_conn)
+        await self.close(ws_conn)
 
     @gen_test
-    def test_handling_errors_in_remote_procedures(self):
-        ws_conn = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
+    async def test_handling_errors_in_remote_procedures(self):
+        ws_conn = await self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
         payload = prepare_payload('div_by_zero', [], 1)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'error': 'an error occurred while executing the function div_by_zero',
             'marker': 1
         })
-        yield self.close(ws_conn)
+        await self.close(ws_conn)
 
     @gen_test
-    def test_default_parameters(self):
-        ws_conn = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
+    async def test_default_parameters(self):
+        ws_conn = await self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
         payload = prepare_payload('say_hello', [], 1)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello Shirow!',
             'marker': 1,
@@ -271,42 +271,42 @@ class RPCServerTest(WebSocketBaseTestCase):
         })
         payload = prepare_payload('say_hello', ['Norris'], 2)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'Hello Norris!',
             'marker': 2,
             'eod': 1,
         })
-        yield self.close(ws_conn)
+        await self.close(ws_conn)
 
     @gen_test
-    def test_returning_more_than_one_value(self):
-        ws_conn = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
+    async def test_returning_more_than_one_value(self):
+        ws_conn = await self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
         payload = prepare_payload('return_more_than_one_value', [], 1)
         ws_conn.write_message(payload)
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'spam',
             'marker': 1,
             'eod': 0,
         })
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'ham',
             'marker': 1,
             'eod': 0,
         })
-        response = yield ws_conn.read_message()
+        response = await ws_conn.read_message()
         self.assertEqual(json_decode(response), {
             'result': 'eggs',
             'marker': 1,
             'eod': 0,
         })
-        yield self.close(ws_conn)
+        await self.close(ws_conn)
 
     @gen_test
-    def test_reading_from_fd(self):
-        ws_conn = yield self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
+    async def test_reading_from_fd(self):
+        ws_conn = await self.ws_connect(f'/rpc/token/{ENCODED_TOKEN}')
 
         pid, master_fd = pty.fork()
         if pid == 0:  # child
@@ -319,32 +319,32 @@ class RPCServerTest(WebSocketBaseTestCase):
         else:  # parent
             payload = prepare_payload('read_from_fd', [master_fd], 1)
             ws_conn.write_message(payload)
-            response = yield ws_conn.read_message()
+            response = await ws_conn.read_message()
             self.assertEqual(json_decode(response), {
                 'result': 'foo\r\n',
                 'marker': 1,
                 'eod': 0,
             })
-            response = yield ws_conn.read_message()
+            response = await ws_conn.read_message()
             self.assertEqual(json_decode(response), {
                 'result': 'bar\r\n',
                 'marker': 1,
                 'eod': 0,
             })
-            response = yield ws_conn.read_message()
+            response = await ws_conn.read_message()
             self.assertEqual(json_decode(response), {
                 'result': 'baz\r\n',
                 'eod': 0,
                 'marker': 1
             })
-            response = yield ws_conn.read_message()
+            response = await ws_conn.read_message()
             self.assertEqual(json_decode(response), {
                 'result': 'qux\r\n',
                 'marker': 1,
                 'eod': 1,
             })
 
-            yield self.close(ws_conn)
+            await self.close(ws_conn)
 
 
 def main():
