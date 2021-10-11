@@ -1,8 +1,9 @@
 {
   "name": "shirow",
-  "version": "1.0.0",
+  "version": "1.0.6",
   "description": "Shirow is an implementation of a distinctive concept of a remote procedure call.",
-  "main": "client/client.js",
+  "source": "client/index.ts",
+  "main": "dist/index.js",
   "homepage": "https://github.com/tolstoyevsky/shirow",
   "author": "CusDeb Team",
   "maintainer": {
@@ -11,14 +12,12 @@
   },
   "files": [
     "client",
-    "LICENSE"
+    "dist"
   ],
   "license": "Apache-2.0",
-  "dependencies": {},
-  "publishConfig": {
-    "registry": "https://eugulixes.name/npm"
-  },
   "scripts": {
+    "build": "parcel build",
+    "prepublishOnly": "npm run build",
     "lint": "eslint ./client/",
     "pretest": "npm run lint",
     "test": "echo \"Warning: no test specified\""
@@ -28,11 +27,20 @@
     "url": "https://github.com/tolstoyevsky/shirow.git"
   },
   "devDependencies": {
+    "@babel/preset-env": "^7.15.8",
+    "@babel/preset-typescript": "^7.15.0",
+    "@parcel/packager-ts": "^2.0.0-rc.0",
+    "@parcel/transformer-typescript-types": "^2.0.0-rc.0",
     "eslint": "^6.8.0",
     "eslint-config-standard": "^14.1.1",
     "eslint-plugin-import": "^2.20.2",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.2.1",
-    "eslint-plugin-standard": "^4.0.1"
+    "eslint-plugin-standard": "^4.0.1",
+    "parcel": "^2.0.0-rc.0",
+    "typescript": "^4.2.4"
+  },
+  "dependencies": {
+    "events": "^3.3.0"
   }
 }
