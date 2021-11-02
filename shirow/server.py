@@ -194,7 +194,7 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
     def on_close(self):
         self.destroy()
 
-    async def on_message(self, message):
+    async def on_message(self, message):  # pylint: disable=invalid-overridden-method
         parsed = json_decode(message)
 
         def callback(response):
