@@ -72,19 +72,19 @@ class MockRPCServer(RPCServer):  # pylint: disable=abstract-method
         self.close_future.set_result((self.close_code, self.close_reason))
 
     @remote
-    async def add(self, _request, op_a, op_b):
+    async def add(self, _request, op_a, op_b):  # pylint: disable=no-self-use
         return op_a + op_b
 
     @remote
-    async def div_by_zero(self, _request):
+    async def div_by_zero(self, _request):  # pylint: disable=no-self-use
         1 / 0  # pylint: disable=pointless-statement
 
     @remote
-    async def echo_via_ret_method(self, request, message):
+    async def echo_via_ret_method(self, request, message):  # pylint: disable=no-self-use
         request.ret(message)
 
     @remote
-    async def echo_via_return_statement(self, _request, message):
+    async def echo_via_return_statement(self, _request, message):  # pylint: disable=no-self-use
         return message
 
     @remote
@@ -99,13 +99,13 @@ class MockRPCServer(RPCServer):  # pylint: disable=abstract-method
         self.io_loop.add_handler(master_fd, handler, self.io_loop.READ)
 
     @remote
-    async def return_more_than_one_value(self, request):
+    async def return_more_than_one_value(self, request):  # pylint: disable=no-self-use
         request.ret_and_continue('spam')
         request.ret_and_continue('ham')
         request.ret_and_continue('eggs')
 
     @remote
-    async def say_hello(self, _request, name='Shirow'):
+    async def say_hello(self, _request, name='Shirow'):  # pylint: disable=no-self-use
         return f'Hello {name}!'
 
 
