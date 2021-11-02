@@ -1,5 +1,6 @@
 [![build](https://github.com/tolstoyevsky/shirow/actions/workflows/jobs.yml/badge.svg)](https://github.com/tolstoyevsky/shirow/actions)
 [![pypi](https://img.shields.io/pypi/v/shirow.svg)](https://pypi.org/project/shirow/)
+[![npm](https://badge.fury.io/js/shirow.svg?style=flat)](https://npmjs.org/package/shirow)
 
 # Shirow
 
