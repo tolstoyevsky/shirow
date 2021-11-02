@@ -28,7 +28,7 @@ class Ret(Exception):
     """
 
     def __init__(self, value=None):
-        super(Ret, self).__init__()
+        super().__init__()
         self.value = value
 
 
