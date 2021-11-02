@@ -1,4 +1,4 @@
-[![build](https://travis-ci.com/tolstoyevsky/shirow.svg?branch=master)](https://travis-ci.org/tolstoyevsky/shirow)
+[![build](https://github.com/tolstoyevsky/shirow/actions/workflows/jobs.yml/badge.svg)](https://github.com/tolstoyevsky/shirow/actions)
 [![pypi](https://img.shields.io/pypi/v/shirow.svg)](https://pypi.org/project/shirow/)
 
 # Shirow
