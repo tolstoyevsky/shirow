@@ -25,8 +25,8 @@ jobs:
 
       - name: Run lint
         run: npm run lint
-  pylint:
-    name: Run pylint
+  pylint_and_tests:
+    name: Run pylint and tests
 
     runs-on: ubuntu-latest
 
@@ -47,7 +47,8 @@ jobs:
       - name: Install pylint
         run: pip install pylint
 
-      - name: Run pylint
+      - name: Run pylint and tests
         run: |
           find . -name "*.py" -not -path "./shirow/test/runtests.py" | xargs pylint
           pylint ./shirow/test/runtests.py --disable=missing-function-docstring
+          python -m tornado.testing shirow/test/runtests.py
