@@ -114,8 +114,8 @@ class RPCServer(WebSocketHandler):  # pylint: disable=abstract-method
         try:
             token = jwt.decode(encoded_token, options.token_key,
                                algorithms=[options.token_algorithm])
-        except DecodeError:
-            raise CouldNotDecodeToken
+        except DecodeError as exc:
+            raise CouldNotDecodeToken from exc
 
         self.user_id = token['user_id']
 
