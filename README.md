@@ -1,5 +1,6 @@
 [![build](https://travis-ci.com/tolstoyevsky/shirow.svg?branch=master)](https://travis-ci.org/tolstoyevsky/shirow)
 [![pypi](https://img.shields.io/pypi/v/shirow.svg)](https://pypi.org/project/shirow/)
+[![npm](https://badge.fury.io/js/shirow.svg?style=flat)](https://npmjs.org/package/shirow)
 
 # Shirow
 
