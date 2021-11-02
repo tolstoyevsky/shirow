@@ -1,4 +1,4 @@
-name: Linter Runner
+name: Jobs Runner
 
 on:
   push:
@@ -25,3 +25,26 @@ jobs:
 
       - name: Run lint
         run: npm run lint
+  pylint:
+    name: Run pylint
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install pylint
+        run: pip install pylint
+
+      - name: Run pylint
+        run: |
+          find . -name "*.py" -not -path "./shirow/test/runtests.py" | xargs pylint
+          pylint ./shirow/test/runtests.py --disable=missing-function-docstring
